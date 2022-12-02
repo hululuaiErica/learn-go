@@ -22,6 +22,9 @@ func NewPropagator(cookieName string, opts...PropagatorOption) *Propagator {
 		cookieName: cookieName,
 		cookieOpt: func(c *http.Cookie) {},
 	}
+	for _, opt := range opts {
+		opt(res)
+	}
 	return res
 }
 
