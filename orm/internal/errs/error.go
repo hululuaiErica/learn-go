@@ -11,6 +11,8 @@ var (
 	// errUnsupportedExpression = errors.New("orm: 不支持的表达式类型")
 
 	ErrNoRows = errors.New("orm: 没有数据")
+	// ErrInsertZeroRow 代表插入 0 行
+	ErrInsertZeroRow = errors.New("orm: 插入 0 行")
 )
 
 // func NewErrUnsupportedExpressionV1(expr any) error {
@@ -33,4 +35,9 @@ func NewErrUnknownColumn(name string) error {
 
 func NewErrInvalidTagContent(pair string) error {
 	return fmt.Errorf("orm: 非法标签值 %s", pair)
+}
+
+
+func NewErrUnsupportedAssignable(expr any) error {
+	return fmt.Errorf("orm: 不支持的赋值表达式类型 %v", expr)
 }

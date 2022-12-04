@@ -3,8 +3,6 @@ package orm
 import (
 	"context"
 	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
-	"gitee.com/geektime-geekbang/geektime-go/orm/model"
-	"strings"
 )
 
 // Selectable 是一个标记接口
@@ -15,13 +13,10 @@ type Selectable interface {
 }
 
 type Selector[T any] struct {
+	builder
 	table string
-	model *model.Model
 	where []Predicate
-	sb *strings.Builder
-	args []any
 	columns []Selectable
-
 	db *DB
 }
 
@@ -34,7 +29,10 @@ type Selector[T any] struct {
 
 func NewSelector[T any](db *DB) *Selector[T] {
 	return &Selector[T]{
-		sb: &strings.Builder{},
+		builder: builder{
+			dialect: db.dialect,
+			quoter: db.dialect.quoter(),
+		},
 		db: db,
 	}
 }
@@ -49,20 +47,19 @@ func (s *Selector[T]) Build() (*Query, error) {
 	if err != nil {
 		return nil, err
 	}
-	sb := s.sb
 
-	sb.WriteString("SELECT ")
+	s.sb.WriteString("SELECT ")
 
 	if err = s.buildColumns(); err != nil {
 		return nil, err
 	}
 
-	sb.WriteString(" FROM ")
+	s.sb.WriteString(" FROM ")
 	// 我怎么把表名拿到
 	if s.table == "" {
-		sb.WriteByte('`')
-		sb.WriteString(s.model.TableName)
-		sb.WriteByte('`')
+		s.sb.WriteByte('`')
+		s.sb.WriteString(s.model.TableName)
+		s.sb.WriteByte('`')
 	} else {
 		// segs := strings.Split(s.table, ".")
 		// sb.WriteByte('`')
@@ -72,10 +69,10 @@ func (s *Selector[T]) Build() (*Query, error) {
 		// sb.WriteByte('`')
 		// sb.WriteString(segs[1])
 		// sb.WriteByte('`')
-		sb.WriteString(s.table)
+		s.sb.WriteString(s.table)
 	}
 	if len(s.where) > 0 {
-		sb.WriteString(" WHERE ")
+		s.sb.WriteString(" WHERE ")
 		p := s.where[0]
 		for i := 1; i < len(s.where); i++ {
 			p = p.And(s.where[i])
@@ -85,9 +82,9 @@ func (s *Selector[T]) Build() (*Query, error) {
 		}
 	}
 
-	sb.WriteByte(';')
+	s.sb.WriteByte(';')
 	return &Query{
-		SQL: sb.String(),
+		SQL: s.sb.String(),
 		Args: s.args,
 	}, nil
 }
