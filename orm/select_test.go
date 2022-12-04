@@ -337,11 +337,11 @@ func TestSelector_Get(t *testing.T) {
 	}
 }
 
-func memoryDB(t *testing.T) *DB {
+func memoryDB(t *testing.T, opts...DBOption) *DB {
 	db, err := Open("sqlite3",
 		"file:test.db?cache=shared&mode=memory",
 		// 仅仅用于单元测试，不会发起真的查询
-		DBWithDialect(DialectMySQL))
+		opts...)
 	require.NoError(t, err)
 	return db
 }
