@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"fmt"
 	"sync/atomic"
 	"unsafe"
 )
@@ -116,6 +117,7 @@ func (c *ConcurrentLinkedQueue[T]) DeQueue(ctx context.Context) (T, error) {
 }
 
 func (c *ConcurrentLinkedQueue[T]) IsFull() bool {
+	fmt.Println()
 	// TODO implement me
 	panic("implement me")
 }
