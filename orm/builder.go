@@ -2,16 +2,13 @@ package orm
 
 import (
 	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
-	"gitee.com/geektime-geekbang/geektime-go/orm/model"
 	"strings"
 )
 
 type builder struct {
+	core
 	sb strings.Builder
 	args []any
-	model *model.Model
-
-	dialect Dialect
 	quoter byte
 }
 

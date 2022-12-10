@@ -17,7 +17,8 @@ type Selector[T any] struct {
 	table string
 	where []Predicate
 	columns []Selectable
-	db *DB
+
+	sess Session
 }
 
 // func (db *DB) NewSelector[T any]()*Selector[T] {
@@ -27,13 +28,14 @@ type Selector[T any] struct {
 // 	}
 // }
 
-func NewSelector[T any](db *DB) *Selector[T] {
+func NewSelector[T any](sess Session) *Selector[T] {
+	c := sess.getCore()
 	return &Selector[T]{
 		builder: builder{
-			dialect: db.dialect,
-			quoter: db.dialect.quoter(),
+			core: c,
+			quoter: c.dialect.quoter(),
 		},
-		db: db,
+		sess: sess,
 	}
 }
 
@@ -43,7 +45,7 @@ func NewSelector[T any](db *DB) *Selector[T] {
 
 func (s *Selector[T]) Build() (*Query, error) {
 	var err error
-	s.model, err = s.db.r.Get(new(T))
+	s.model, err = s.r.Get(new(T))
 	if err != nil {
 		return nil, err
 	}
@@ -305,9 +307,8 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 		return nil, err
 	}
 
-	db := s.db.db
 	// 在这里，就是要发起查询，并且处理结果集
-	rows, err := db.QueryContext(ctx, q.SQL, q.Args...)
+	rows, err := s.sess.queryContext(ctx, q.SQL, q.Args...)
 	// 这个是查询错误
 	if err != nil {
 		return nil, err
@@ -327,7 +328,7 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	// }
 	//
 	tp := new(T)
-	val := s.db.creator(s.model, tp)
+	val := s.creator(s.model, tp)
 	err = val.SetColumns(rows)
 
 	// 接口定义好之后，就两件事，一个是用新接口的方法改造上层，
@@ -339,3 +340,13 @@ func (s *Selector[T]) GetMulti(ctx context.Context) ([]*T, error) {
 	panic("implement me")
 }
 
+// type Orm struct {
+// 	orm.Ormer
+// }
+//
+// func (o *Orm) Insert(md interface{}) (int64, error) {
+// 	// 在这里做一些事情
+// 	res, err := o.Ormer.Insert(md)
+// 	// 在这里再做一些事情
+// 	return res, err
+// }
