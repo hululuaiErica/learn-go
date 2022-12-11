@@ -5,9 +5,9 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/valuer"
-	"gitee.com/geektime-geekbang/geektime-go/orm/model"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/internal/errs"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/internal/valuer"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/model"
 	"log"
 	"time"
 )

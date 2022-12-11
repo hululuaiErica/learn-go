@@ -1,8 +1,7 @@
-//go:build e2e
+//go:build v15
 package integration
 
 import (
-	"gitee.com/geektime-geekbang/geektime-go/orm"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

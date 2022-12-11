@@ -1,3 +1,4 @@
+//go:build howework
 package homework_delete
 
 import (

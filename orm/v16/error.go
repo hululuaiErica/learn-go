@@ -1,7 +1,7 @@
 //go:build v16
 package orm
 
-import "gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
+import "gitee.com/geektime-geekbang/geektime-go/orm/v16/internal/errs"
 
 // 将内部的 sentinel error 暴露出去
 var (

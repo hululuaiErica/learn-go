@@ -6,8 +6,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/valuer"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16/internal/errs"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16/internal/valuer"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -756,12 +756,12 @@ func TestSelector_Get(t *testing.T) {
 // 我的输出结果
 // goos: linux
 // goarch: amd64
-// pkg: gitee.com/geektime-geekbang/geektime-go/orm
+// pkg: gitee.com/geektime-geekbang/geektime-go/orm/v16
 // cpu: Intel(R) Core(TM) i5-10400F CPU @ 2.90GHz
 // BenchmarkQuerier_Get/unsafe-12             10000            453677 ns/op            3246 B/op        108 allocs/op
 // BenchmarkQuerier_Get/reflect-12            10000           1173199 ns/op            3427 B/op        117 allocs/op
 // PASS
-// ok      gitee.com/geektime-geekbang/geektime-go/orm     16.324s
+// ok      gitee.com/geektime-geekbang/geektime-go/orm/v16     16.324s
 func BenchmarkQuerier_Get(b *testing.B) {
 	db, err := Open("sqlite3", fmt.Sprintf("file:benchmark_get.db?cache=shared&mode=memory"))
 	if err != nil {

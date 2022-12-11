@@ -1,5 +1,5 @@
 
-
+//go:build howework
 package orm
 
 import (

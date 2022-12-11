@@ -17,8 +17,8 @@ package valuer
 
 import (
 	"database/sql"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
-	"gitee.com/geektime-geekbang/geektime-go/orm/model"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16/internal/errs"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16/model"
 	"reflect"
 	"unsafe"
 )

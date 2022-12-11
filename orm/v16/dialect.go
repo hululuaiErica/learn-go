@@ -2,7 +2,7 @@
 package orm
 
 import (
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16/internal/errs"
 )
 
 var (

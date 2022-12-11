@@ -4,7 +4,7 @@ package orm
 import (
 	"context"
 	"database/sql"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/internal/errs"
 )
 
 // Selector 用于构造 SELECT 语句

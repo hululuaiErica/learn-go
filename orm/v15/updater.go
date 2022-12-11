@@ -3,7 +3,7 @@ package orm
 
 import (
 	"context"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/internal/errs"
 )
 
 type Updater[T any] struct {

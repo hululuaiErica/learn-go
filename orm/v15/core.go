@@ -18,8 +18,8 @@ package orm
 import (
 	"context"
 	"database/sql"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/valuer"
-	"gitee.com/geektime-geekbang/geektime-go/orm/model"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/internal/valuer"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/model"
 )
 
 type core struct {

@@ -3,7 +3,7 @@ package orm
 
 import (
 	"database/sql"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/internal/errs"
 	"github.com/stretchr/testify/assert"
 	"testing"
 )

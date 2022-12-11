@@ -3,7 +3,7 @@ package querylog
 
 import (
 	"context"
-	"gitee.com/geektime-geekbang/geektime-go/orm"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16"
 	"log"
 )
 

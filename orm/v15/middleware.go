@@ -3,7 +3,7 @@ package orm
 
 import (
 	"context"
-	"gitee.com/geektime-geekbang/geektime-go/orm/model"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/model"
 )
 
 type QueryContext struct {

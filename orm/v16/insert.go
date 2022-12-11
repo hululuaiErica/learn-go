@@ -3,8 +3,8 @@ package orm
 
 import (
 	"context"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
-	"gitee.com/geektime-geekbang/geektime-go/orm/model"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16/internal/errs"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16/model"
 )
 
 type UpsertBuilder[T any] struct {

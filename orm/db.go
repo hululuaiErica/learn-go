@@ -3,9 +3,11 @@ package orm
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
 	"gitee.com/geektime-geekbang/geektime-go/orm/internal/valuer"
 	"gitee.com/geektime-geekbang/geektime-go/orm/model"
+	"log"
 )
 
 type DBOption func(db *DB)
@@ -153,4 +155,12 @@ func MustOpen(driver string, dataSourceName string, opts...DBOption) *DB {
 	return res
 }
 
+func (db *DB) Wait() error {
+	err := db.db.Ping()
+	for err == driver.ErrBadConn {
+		log.Println("数据库启动中")
+		err = db.db.Ping()
+	}
+	return nil
+}
 

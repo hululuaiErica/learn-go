@@ -2,7 +2,7 @@
 package model
 
 import (
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/internal/errs"
 	"reflect"
 	"strings"
 	"sync"

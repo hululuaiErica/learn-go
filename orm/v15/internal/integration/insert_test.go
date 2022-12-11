@@ -1,10 +1,9 @@
-//go:build e2e
+//go:build v15
 package integration
 
 import (
 	"context"
-	"gitee.com/geektime-geekbang/geektime-go/orm"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/test"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v15/internal/test"
 	_ "github.com/go-sql-driver/mysql"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

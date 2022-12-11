@@ -77,7 +77,6 @@ type SimpleStruct struct {
 	NullInt32Ptr *sql.NullInt32
 	NullInt64Ptr *sql.NullInt64
 	NullBoolPtr *sql.NullBool
-	// NullTimePtr    *sql.NullTime
 	NullFloat64Ptr *sql.NullFloat64
 	JsonColumn     *JsonColumn
 }
@@ -134,8 +133,7 @@ func (j JsonColumn) Value() (driver.Value, error) {
 	return bs, nil
 }
 
-func
-NewSimpleStruct(id uint64) *SimpleStruct {
+func NewSimpleStruct(id uint64) *SimpleStruct {
 	return &SimpleStruct{
 		Id: id,
 		Bool: true,
@@ -173,6 +171,7 @@ NewSimpleStruct(id uint64) *SimpleStruct {
 		NullInt32Ptr: &sql.NullInt32{Int32: 32, Valid: true},
 		NullInt64Ptr: &sql.NullInt64{Int64: 64, Valid: true},
 		NullBoolPtr: &sql.NullBool{Bool: true, Valid: true},
+		// NullTimePtr: &sql.NullTime{Time: t, Valid: true},
 		NullFloat64Ptr: &sql.NullFloat64{Float64: 6.4, Valid: true},
 		JsonColumn: &JsonColumn{
 			Val: User{Name: "Tom"},

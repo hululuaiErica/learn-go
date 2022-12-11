@@ -353,7 +353,7 @@ func (s *Selector[T]) getHandler(ctx context.Context, qc *QueryContext) *QueryRe
 		// 要不要返回 error？
 		// 返回 error，和 sql 包语义保持一致
 		return &QueryResult{
-			Err: err,
+			Err: ErrNoRows,
 		}
 	}
 

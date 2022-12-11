@@ -17,9 +17,9 @@ package valuer
 
 import (
 	"database/sql/driver"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
-	"gitee.com/geektime-geekbang/geektime-go/orm/internal/test"
-	"gitee.com/geektime-geekbang/geektime-go/orm/model"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16/internal/errs"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16/internal/test"
+	"gitee.com/geektime-geekbang/geektime-go/orm/v16/model"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"testing"
