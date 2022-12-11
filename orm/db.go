@@ -126,6 +126,13 @@ func DBWithDialect(dialect Dialect) DBOption {
 	}
 }
 
+func DBWithMiddlewares(mdls...Middleware) DBOption {
+	return func(db *DB) {
+		db.mdls = mdls
+		// db.mdls = append(db.mdls, mdls...)
+	}
+}
+
 func DBWithRegistry(r model.Registry) DBOption {
 	return func(db *DB) {
 		db.r = r

@@ -2,6 +2,7 @@ package orm
 
 import (
 	"context"
+	"database/sql"
 	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
 	"gitee.com/geektime-geekbang/geektime-go/orm/model"
 )
@@ -83,23 +84,26 @@ func (i *Inserter[T]) Build() (*Query, error) {
 		return nil, errs.ErrInsertZeroRow
 	}
 	i.sb.WriteString("INSERT INTO ")
-	m, err := i.r.Get(i.values[0])
-	i.model = m
-	if err != nil {
-		return nil, err
+	if i.model == nil {
+		m, err := i.r.Get(i.values[0])
+		i.model = m
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	// 拼接表名
-	i.quote(m.TableName)
+	i.quote(i.model.TableName)
 	// 一定要显示指定列的顺序，不然我们不知道数据库中默认的顺序
 	// 我们要构造 `test_model`(col1, col2...)
 	i.sb.WriteByte('(')
 
-	fields := m.Fields
+	fields := i.model.Fields
 	// 用户指定了
 	if len(i.columns) > 0 {
 		fields = make([]*model.Field, 0, len(i.columns))
 		for _, fd := range i.columns {
-			fdMeta, ok := m.FieldMap[fd]
+			fdMeta, ok := i.model.FieldMap[fd]
 			// 传入了乱七八糟的列
 			if !ok {
 				return nil, errs.NewErrUnknownField(fd)
@@ -145,7 +149,7 @@ func (i *Inserter[T]) Build() (*Query, error) {
 	}
 
 	if i.onDuplicateKey != nil {
-		err = i.dialect.buildUpsert(&i.builder, i.onDuplicateKey)
+		err := i.dialect.buildUpsert(&i.builder, i.onDuplicateKey)
 		if err != nil {
 			return nil, err
 		}
@@ -155,16 +159,56 @@ func (i *Inserter[T]) Build() (*Query, error) {
 }
 
 func (i *Inserter[T]) Exec(ctx context.Context) Result {
-	q, err := i.Build()
+	var err error
+	i.model, err = i.r.Get(new(T))
 	if err != nil {
 		return Result{
 			err: err,
 		}
 	}
-	res, err := i.sess.execContext(ctx, q.SQL, q.Args...)
+	root := i.execHandler
+	for j := len(i.mdls) - 1; j >= 0; j-- {
+		root=i.mdls[j](root)
+	}
+	res := root(ctx, &QueryContext{
+		Type: "INSERT",
+		Builder: i,
+		Model: i.model,
+	})
+	// var t *T
+	// if val, ok := res.Result.(*T); ok {
+	// 	t = val
+	// }
+	// return t, res.Err
+	var sqlRes sql.Result
+	if res.Result != nil {
+		sqlRes =  res.Result.(sql.Result)
+	}
 	return Result{
-		err: err,
-		res: res,
+		err: res.Err,
+		res: sqlRes,
+	}
+}
+
+var _ Handler = (&Inserter[int]{}).execHandler
+
+func (i *Inserter[T]) execHandler(ctx context.Context, qc *QueryContext) *QueryResult {
+	q, err := i.Build()
+	if err != nil {
+		return &QueryResult{
+			Err: err,
+			Result: Result{
+				err: err,
+			},
+		}
+	}
+	res, err := i.sess.execContext(ctx, q.SQL, q.Args...)
+	return &QueryResult{
+		Err: err,
+		Result: Result{
+			err: err,
+			res: res,
+		},
 	}
 }
 
