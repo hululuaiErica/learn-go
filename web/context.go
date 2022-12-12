@@ -76,6 +76,12 @@ func (c *Context) RespJSONOK(val any) error {
 	return c.RespJSON(http.StatusOK, val)
 }
 
+func (c *Context) RespServerError(msg string) error {
+	c.RespData = []byte(msg)
+	c.RespStatusCode = 500
+	return nil
+}
+
 func (c *Context) RespJSON(status int, val any) error {
 	// 这种是不行的，用户需求是多变的
 	// if status == 500 {

@@ -25,6 +25,15 @@ func NewConcurrentLinkedQueue[T any]() *ConcurrentLinkedQueue[T] {
 
 func (c *ConcurrentLinkedQueue[T]) EnQueue(ctx context.Context, data T) error {
 
+	// for {
+	// 	select {
+	// 	case <- ctx.Done():
+	// 		return
+		// case <- time.After(10 * time.Second):
+	// 	default:
+	// 		time.Sleep(10 * time.Second)
+	// 	}
+	// }
 
 	newNode := &node[T]{
 		val: data,
