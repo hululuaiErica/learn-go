@@ -25,6 +25,10 @@ func TestMySQLSelect(t *testing.T) {
 	})
 }
 
+func (s *InsertSuite) TearDownSuite() {
+	orm.RawQuery[test.SimpleStruct](s.db, "TRUNCATE TABLE `simple_struct`").Exec(context.Background())
+}
+
 func (s *SelectSuite) SetupSuite() {
 	s.Suite.SetupSuite()
 	res := orm.NewInserter[test.SimpleStruct](s.db).Values(

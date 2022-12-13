@@ -39,7 +39,7 @@ func NewSelector[T any](sess Session) *Selector[T] {
 	}
 }
 
-// func (s *Selector[T]) Demo[S any]() (*Query, error) {
+// func (r *Selector[T]) Demo[S any]() (*Query, error) {
 // 	panic("implement me")
 // }
 
@@ -65,7 +65,7 @@ func (s *Selector[T]) Build() (*Query, error) {
 		s.sb.WriteString(s.model.TableName)
 		s.sb.WriteByte('`')
 	} else {
-		// segs := strings.Split(s.table, ".")
+		// segs := strings.Split(r.table, ".")
 		// sb.WriteByte('`')
 		// sb.WriteString(segs[0])
 		// sb.WriteByte('`')
@@ -214,14 +214,14 @@ func (s *Selector[T]) addArg(vals ...any) {
 }
 
 // 这种也是可行
-// s.Select("first_name,last_name")
-// func (s *Selector[T]) SelectV1(cols string) *Selector[T] {
-// 	return s
+// r.Select("first_name,last_name")
+// func (r *Selector[T]) SelectV1(cols string) *Selector[T] {
+// 	return r
 // }
 //
-// func (s *Selector[T]) Select(cols...string) *Selector[T] {
-// 	s.columns = cols
-// 	return s
+// func (r *Selector[T]) Select(cols...string) *Selector[T] {
+// 	r.columns = cols
+// 	return r
 // }
 
 func (s *Selector[T]) Select(cols...Selectable) *Selector[T] {
@@ -235,9 +235,9 @@ func (s *Selector[T]) From(table string) *Selector[T] {
 }
 
 // ids:=[]int{1, 2, 3,}
-// s.Where("id in (?, ?, ?)", ids)
-// s.Where("id in (?, ?, ?)", ids...)
-// func (s *Selector[T]) Where(query string, args...any) *Selector[T] {
+// r.Where("id in (?, ?, ?)", ids)
+// r.Where("id in (?, ?, ?)", ids...)
+// func (r *Selector[T]) Where(query string, args...any) *Selector[T] {
 //
 // }
 
@@ -246,14 +246,14 @@ func (s *Selector[T]) Where(ps...Predicate) *Selector[T] {
 	return s
 }
 
-// func (s *Selector[T]) GetV1(ctx context.Context) (*T, error) {
-// 	q, err := s.Build()
+// func (r *Selector[T]) GetV1(ctx context.Context) (*T, error) {
+// 	q, err := r.Build()
 // 	// 这个是构造 SQL 失败
 // 	if err != nil {
 // 		return nil, err
 // 	}
 //
-// 	db := s.db.db
+// 	db := r.db.db
 // 	// 在这里，就是要发起查询，并且处理结果集
 // 	rows, err := db.QueryContext(ctx, q.SQL, q.Args...)
 // 	// 这个是查询错误
@@ -283,7 +283,7 @@ func (s *Selector[T]) Where(ps...Predicate) *Selector[T] {
 // 	address := reflect.ValueOf(tp).UnsafePointer()
 // 	for _, c := range cs {
 // 		// c 是列名
-// 		fd, ok := s.model.ColumnMap[c]
+// 		fd, ok := r.model.ColumnMap[c]
 // 		if !ok {
 // 			return nil, errs.NewErrUnknownColumn(c)
 // 		}
@@ -308,72 +308,87 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	if err != nil {
 		return nil, err
 	}
-	root := s.getHandler
-	for i := len(s.mdls) - 1; i >= 0; i -- {
-		root=s.mdls[i](root)
-	}
-	res := root(ctx, &QueryContext{
+	res := get[T](ctx, s.sess, s.core, &QueryContext{
 		Type: "SELECT",
 		Builder: s,
 		Model: s.model,
 	})
-	// var t *T
-	// if val, ok := res.Result.(*T); ok {
-	// 	t = val
-	// }
-	// return t, res.Err
 	if res.Result != nil {
 		return res.Result.(*T), res.Err
 	}
 	return nil, res.Err
 }
 
-var _ Handler = (&Selector[any]{}).getHandler
-
-func (s *Selector[T]) getHandler(ctx context.Context, qc *QueryContext) *QueryResult {
-	q, err := s.Build()
-	// 这个是构造 SQL 失败
-	if err != nil {
-		return &QueryResult{
-			Err: err,
-		}
-	}
-
-	// 在这里，就是要发起查询，并且处理结果集
-	rows, err := s.sess.queryContext(ctx, q.SQL, q.Args...)
-	// 这个是查询错误
-	if err != nil {
-		return &QueryResult{
-			Err: err,
-		}
-	}
-
-	// 你要确认有没有数据
-	if !rows.Next() {
-		// 要不要返回 error？
-		// 返回 error，和 sql 包语义保持一致
-		return &QueryResult{
-			Err: ErrNoRows,
-		}
-	}
-
-	// if flag {
-	// 	val := valuer.NewReflectValue()
-	// } else {
-	// 	val := valuer.NewUnsafeValue()
+// func (r *Selector[T]) Get(ctx context.Context) (*T, error) {
+// 	var err error
+// 	r.model, err = r.r.Get(new(T))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	root := r.getHandler
+// 	for i := len(r.mdls) - 1; i >= 0; i -- {
+// 		root=r.mdls[i](root)
+// 	}
+// 	res := root(ctx, &QueryContext{
+// 		Type: "SELECT",
+// 		Builder: r,
+// 		Model: r.model,
+// 	})
+	// var t *T
+	// if val, ok := res.Result.(*T); ok {
+	// 	t = val
 	// }
-	//
-	tp := new(T)
-	val := s.creator(s.model, tp)
-	err = val.SetColumns(rows)
+	// return t, res.Err
+// 	if res.Result != nil {
+// 		return res.Result.(*T), res.Err
+// 	}
+// 	return nil, res.Err
+// }
 
-	// 接口定义好之后，就两件事，一个是用新接口的方法改造上层，
-	// 一个就是提供不同的实现
-	return &QueryResult{
-		Err: err,
-		Result: tp,
-	}
-}
+// func getHandler[T any](ctx context.Context, sess Session, c core, qc *QueryContext) *QueryResult {
+// 	q, err := qc.Builder.Build()
+// 	// 这个是构造 SQL 失败
+// 	if err != nil {
+// 		return &QueryResult{
+// 			Err: err,
+// 		}
+// 	}
+//
+// 	// 在这里，就是要发起查询，并且处理结果集
+// 	rows, err := sess.queryContext(ctx, q.SQL, q.Args...)
+// 	// 这个是查询错误
+// 	if err != nil {
+// 		return &QueryResult{
+// 			Err: err,
+// 		}
+// 	}
+//
+// 	// 你要确认有没有数据
+// 	if !rows.Next() {
+// 		// 要不要返回 error？
+// 		// 返回 error，和 sql 包语义保持一致
+// 		return &QueryResult{
+// 			Err: ErrNoRows,
+// 		}
+// 	}
+//
+// 	// if flag {
+// 	// 	val := valuer.NewReflectValue()
+// 	// } else {
+// 	// 	val := valuer.NewUnsafeValue()
+// 	// }
+// 	//
+// 	tp := new(T)
+// 	val := c.creator(c.model, tp)
+// 	err = val.SetColumns(rows)
+//
+// 	// 接口定义好之后，就两件事，一个是用新接口的方法改造上层，
+// 	// 一个就是提供不同的实现
+// 	return &QueryResult{
+// 		Err: err,
+// 		Result: tp,
+// 	}
+// }
 
 func (s *Selector[T]) GetMulti(ctx context.Context) ([]*T, error) {
 	panic("implement me")
