@@ -14,7 +14,7 @@ type Selectable interface {
 
 type Selector[T any] struct {
 	builder
-	table string
+	table TableReference
 	where []Predicate
 	columns []Selectable
 
@@ -59,22 +59,27 @@ func (s *Selector[T]) Build() (*Query, error) {
 	}
 
 	s.sb.WriteString(" FROM ")
-	// 我怎么把表名拿到
-	if s.table == "" {
-		s.sb.WriteByte('`')
-		s.sb.WriteString(s.model.TableName)
-		s.sb.WriteByte('`')
-	} else {
-		// segs := strings.Split(r.table, ".")
-		// sb.WriteByte('`')
-		// sb.WriteString(segs[0])
-		// sb.WriteByte('`')
-		// sb.WriteByte('.')
-		// sb.WriteByte('`')
-		// sb.WriteString(segs[1])
-		// sb.WriteByte('`')
-		s.sb.WriteString(s.table)
+
+	if err := s.buildTable(s.table); err != nil {
+		return nil, err
 	}
+
+	// 我怎么把表名拿到
+	//if s.table == "" {
+	//	s.sb.WriteByte('`')
+	//	s.sb.WriteString(s.model.TableName)
+	//	s.sb.WriteByte('`')
+	//} else {
+	//	// segs := strings.Split(r.table, ".")
+	//	// sb.WriteByte('`')
+	//	// sb.WriteString(segs[0])
+	//	// sb.WriteByte('`')
+	//	// sb.WriteByte('.')
+	//	// sb.WriteByte('`')
+	//	// sb.WriteString(segs[1])
+	//	// sb.WriteByte('`')
+	//	s.sb.WriteString(s.table)
+	//}
 	if len(s.where) > 0 {
 		s.sb.WriteString(" WHERE ")
 		p := s.where[0]
@@ -91,6 +96,71 @@ func (s *Selector[T]) Build() (*Query, error) {
 		SQL: s.sb.String(),
 		Args: s.args,
 	}, nil
+}
+
+func (s *Selector[T]) buildTable(table TableReference) error {
+	switch t := table.(type) {
+	case nil:
+		// 这是代表完全没有调用 FROM，也就是最普通的形态
+		s.quote(s.model.TableName)
+	case Table:
+		// 这个地方是拿到指定的表的元数据
+		m, err := s.r.Get(t.entity)
+		if err != nil {
+			return err
+		}
+		s.quote(m.TableName)
+		if t.alias != "" {
+			s.sb.WriteString(" AS ")
+			s.quote(t.alias)
+		}
+	case Join:
+		s.sb.WriteByte('(')
+		// 构造左边
+		err := s.buildTable(t.left)
+		if err != nil {
+			return err
+		}
+		s.sb.WriteByte(' ')
+		s.sb.WriteString(t.typ)
+		s.sb.WriteByte(' ')
+		// 构造右边
+		err = s.buildTable(t.right)
+		if err != nil {
+			return err
+		}
+
+		if len(t.using) >0 {
+			s.sb.WriteString(" USING (")
+			// 拼接 USING (xx, xx)
+			for i, col := range t.using {
+				if i > 0 {
+					s.sb.WriteByte(',')
+				}
+				err = s.buildColumn(Column{name: col})
+				if err != nil {
+					return err
+				}
+			}
+			s.sb.WriteByte(')')
+		}
+
+		if len(t.on) > 0 {
+			s.sb.WriteString(" ON ")
+			p := t.on[0]
+			for i := 1; i < len(t.on); i++ {
+				p = p.And(t.on[i])
+			}
+			if err = s.buildExpression(p); err != nil {
+				return err
+			}
+		}
+
+		s.sb.WriteByte(')')
+	default:
+		return errs.NewErrUnsupportedTable(table)
+	}
+	return nil
 }
 
 func (s *Selector[T]) buildExpression(expr Expression) error {
@@ -186,23 +256,6 @@ func (s *Selector[T]) buildColumns() error {
 	return nil
 }
 
-func (s *Selector[T]) buildColumn(c Column) error {
-	fd, ok := s.model.FieldMap[c.name]
-	// 字段不对，或者说列不对
-	if !ok {
-		return errs.NewErrUnknownField(c.name)
-	}
-	s.sb.WriteByte('`')
-	s.sb.WriteString(fd.ColName)
-	s.sb.WriteByte('`')
-	if c.alias != "" {
-		s.sb.WriteString(" AS `")
-		s.sb.WriteString(c.alias)
-		s.sb.WriteByte('`')
-	}
-	return nil
-}
-
 func (s *Selector[T]) addArg(vals ...any) {
 	if len(vals) == 0 {
 		return
@@ -229,7 +282,7 @@ func (s *Selector[T]) Select(cols...Selectable) *Selector[T] {
 	return s
 }
 
-func (s *Selector[T]) From(table string) *Selector[T] {
+func (s *Selector[T]) From(table TableReference) *Selector[T] {
 	s.table = table
 	return s
 }

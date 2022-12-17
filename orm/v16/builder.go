@@ -53,26 +53,6 @@ func (b *builder) colName(table TableReference, fd string) (string, error) {
 			return "", errs.NewErrUnknownField(fd)
 		}
 		return fdMeta.ColName, nil
-	case Join:
-		colName, err := b.colName(tab.left, fd)
-		if err != nil {
-			return colName, nil
-		}
-		return b.colName(tab.right, fd)
-	case Subquery:
-		if len(tab.columns) > 0 {
-			for _, c := range tab.columns {
-				if c.selectedAlias() == fd {
-					return fd, nil
-				}
-
-				if c.fieldName() == fd {
-					return b.colName(c.target(), fd)
-				}
-			}
-			return "", errs.NewErrUnknownField(fd)
-		}
-		return b.colName(tab.table, fd)
 	default:
 		return "", errs.NewErrUnsupportedExpressionType(tab)
 	}
