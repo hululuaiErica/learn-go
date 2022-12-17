@@ -72,7 +72,7 @@ func (j Join) table() {
 	panic("implement me")
 }
 
-// t3 := t1.Join(t2).Using(C("Id").Eq("RefId"))
+// t3 := t1.Join(t2).Using(C("Id").EQ("RefId"))
 // t4 := t3.LeftJoin(t2)
 func (j Join) Join(right TableReference) *JoinBuilder {
 	return &JoinBuilder{
@@ -105,7 +105,7 @@ type JoinBuilder struct {
 	typ string
 }
 
-// t3 := t1.Join(t2).Using(C("Id").Eq("RefId"))
+// t3 := t1.Join(t2).Using(C("Id").EQ("RefId"))
 func (j *JoinBuilder) On(ps...Predicate) Join {
 	return Join{
 		left: j.left,

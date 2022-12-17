@@ -4,8 +4,9 @@ package orm
 type op string
 
 const (
-	opEq op = "="
+	opEQ op = "="
 	opLT op = "<"
+	opGT op = ">"
 	opNot op = "NOT"
 	opAnd op = "AND"
 	opOr op = "OR"
@@ -24,11 +25,11 @@ type Predicate struct {
 	right Expression
 }
 
-// Eq("id", 12)
-// Eq(sub, "id", 12)
-// Eq(sub.id, 12)
-// Eq("sub.id", 12)
-// func Eq(column string, right any) Predicate  {
+// EQ("id", 12)
+// EQ(sub, "id", 12)
+// EQ(sub.id, 12)
+// EQ("sub.id", 12)
+// func EQ(column string, right any) Predicate  {
 // 	return Predicate{
 // 		Column: column,
 // 		Op: "=",
@@ -38,7 +39,7 @@ type Predicate struct {
 
 
 
-// Not(C("name").Eq("Tom"))
+// Not(C("name").EQ("Tom"))
 func Not(p Predicate) Predicate {
 	return Predicate{
 		op:    opNot,
@@ -46,7 +47,7 @@ func Not(p Predicate) Predicate {
 	}
 }
 
-// C("id").Eq(12).And(C("name").Eq("Tom"))
+// C("id").EQ(12).And(C("name").EQ("Tom"))
 func (left Predicate) And(right Predicate) Predicate {
 	return Predicate{
 		left:  left,
@@ -55,7 +56,7 @@ func (left Predicate) And(right Predicate) Predicate {
 	}
 }
 
-// C("id").Eq(12).Or(C("name").Eq("Tom"))
+// C("id").EQ(12).Or(C("name").EQ("Tom"))
 func (left Predicate) Or(right Predicate) Predicate {
 	return Predicate{
 		left:  left,

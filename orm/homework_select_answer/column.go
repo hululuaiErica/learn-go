@@ -32,7 +32,7 @@ func C(name string) Column {
 	return Column{name: name}
 }
 
-// EQ 例如 C("id").Eq(12)
+// EQ 例如 C("id").EQ(12)
 func (c Column) EQ(arg any) Predicate {
 	return Predicate{
 		left:  c,

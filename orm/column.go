@@ -20,13 +20,29 @@ func (c Column) As(alias string) Column {
 	}
 }
 
-// Eq 代表相等
-// C("id").Eq(12)
-// sub.C("id").Eq(12)
-func (c Column) Eq(arg any) Predicate {
+// EQ 代表相等
+// C("id").EQ(12)
+// sub.C("id").EQ(12)
+func (c Column) EQ(arg any) Predicate {
 	return Predicate{
 		left:  c,
-		op:    opEq,
+		op:    opEQ,
+		right: valueOf(arg),
+	}
+}
+
+func (c Column) LT(arg any) Predicate {
+	return Predicate{
+		left:  c,
+		op:    opLT,
+		right: valueOf(arg),
+	}
+}
+
+func (c Column) GT(arg any) Predicate {
+	return Predicate{
+		left:  c,
+		op:    opGT,
 		right: valueOf(arg),
 	}
 }

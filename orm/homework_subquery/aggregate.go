@@ -30,7 +30,7 @@ func (a Aggregate) As(alias string) Aggregate {
 	}
 }
 
-// EQ 例如 C("id").Eq(12)
+// EQ 例如 C("id").EQ(12)
 func (a Aggregate) EQ(arg any) Predicate {
 	return Predicate{
 		left:  a,

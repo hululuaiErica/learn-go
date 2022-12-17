@@ -62,7 +62,7 @@ func (c Column) Multi(delta int) MathExpr {
 	}
 }
 
-// EQ 例如 C("id").Eq(12)
+// EQ 例如 C("id").EQ(12)
 func (c Column) EQ(arg any) Predicate {
 	return Predicate{
 		left:  c,

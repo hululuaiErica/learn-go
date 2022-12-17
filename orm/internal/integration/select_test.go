@@ -46,12 +46,12 @@ func (s *SelectSuite) TestGet() {
 	} {
 		{
 			name: "get data",
-			s: orm.NewSelector[test.SimpleStruct](s.db).Where(orm.C("Id").Eq(100)),
+			s: orm.NewSelector[test.SimpleStruct](s.db).Where(orm.C("Id").EQ(100)),
 			wantRes: test.NewSimpleStruct(100),
 		},
 		{
 			name: "no row",
-			s: orm.NewSelector[test.SimpleStruct](s.db).Where(orm.C("Id").Eq(200)),
+			s: orm.NewSelector[test.SimpleStruct](s.db).Where(orm.C("Id").EQ(200)),
 			wantErr: orm.ErrNoRows,
 		},
 	}

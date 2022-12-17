@@ -22,7 +22,7 @@ func TestNewMiddlewareBuilder(t *testing.T) {
 		"file:test.db?cache=shared&mode=memory",
 		orm.DBWithMiddlewares(m.Build()))
 	require.NoError(t, err)
-	_, _ = orm.NewSelector[TestModel](db).Where(orm.C("Id").Eq(10)).Get(context.Background())
+	_, _ = orm.NewSelector[TestModel](db).Where(orm.C("Id").EQ(10)).Get(context.Background())
 	assert.Equal(t, "SELECT * FROM `test_model` WHERE `id` = ?;", query)
 	assert.Equal(t, []any{10}, args)
 
