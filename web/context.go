@@ -35,6 +35,23 @@ type Context struct {
 	// cookieSameSite http.SameSite
 }
 
+func (c *Context) Redirect(url string) {
+	http.Redirect(c.Resp, c.Req, url, http.StatusFound)
+}
+
+// RespString 返回字符串作为响应
+func (c *Context) RespString(code int, msg string) error {
+	c.RespData = []byte(msg)
+	c.RespStatusCode = code
+	return nil
+}
+
+func (c *Context) RespOk(msg string) error {
+	c.RespStatusCode = http.StatusOK
+	c.RespData = []byte(msg)
+	return nil
+}
+
 // 用户每次都得自己检测是不是 500，然后调这个方法
 // func (c *Context) ErrPage() {
 //
