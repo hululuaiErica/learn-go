@@ -3,20 +3,19 @@ package sso
 import (
 	"fmt"
 	web "gitee.com/geektime-geekbang/geektime-go/web"
-	"github.com/patrickmn/go-cache"
 	"net/http"
-	"net/url"
 	"testing"
-	"time"
 )
 
 // var sessions = map[string]any{}
-var aSessions = cache.New(time.Minute * 15, time.Second)
+//var aSessions = cache.New(time.Minute * 15, time.Second)
+var aSessions = sessions
+
 // 使用 Redis
 
 // 我要先启动一个业务服务器
 // 我们在业务服务器上，模拟一个单机登录的过程
-func TestBizAServer(t *testing.T)  {
+func testBizAServer(t *testing.T)  {
 	server := web.NewHTTPServer(web.ServerWithMiddleware(LoginMiddlewareServerA))
 
 	// 我要求我这里，必须登录了才能看到，那该怎么办
@@ -44,8 +43,7 @@ func LoginMiddlewareServerA(next web.HandleFunc) web.HandleFunc {
 			next(ctx)
 			return
 		}
-		redirect := fmt.Sprintf("http://sso.biz.com:8000/login?redirect=%s",
-			url.QueryEscape("http://a.biz.com:8081/profile"))
+		redirect := fmt.Sprintf("http://sso.biz.com:8000/login?client_id=server_a")
 		cookie, err := ctx.Req.Cookie("token")
 		if err != nil {
 			http.Redirect(ctx.Resp, ctx.Req, redirect, 302)
@@ -54,7 +52,7 @@ func LoginMiddlewareServerA(next web.HandleFunc) web.HandleFunc {
 
 		//var storageDriver ***
 		ssid := cookie.Value
-		_, ok := sessions.Get(ssid)
+		_, ok := aSessions.Get(ssid)
 		if !ok {
 			// 你没有登录
 			http.Redirect(ctx.Resp, ctx.Req, redirect, 302)

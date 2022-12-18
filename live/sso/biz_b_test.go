@@ -3,19 +3,19 @@ package sso
 import (
 	web "gitee.com/geektime-geekbang/geektime-go/web"
 	"github.com/google/uuid"
-	"github.com/patrickmn/go-cache"
 	"net/http"
 	"testing"
 	"time"
 )
 
 // var sessions = map[string]any{}
-var bSessions = cache.New(time.Minute * 15, time.Second)
+//var bSessions = cache.New(time.Minute * 15, time.Second)
+var bSessions = sessions
 // 使用 Redis
 
 // 我要先启动一个业务服务器
 // 我们在业务服务器上，模拟一个单机登录的过程
-func TestBizBServer(t *testing.T)  {
+func testBizBServer(t *testing.T)  {
 	server := web.NewHTTPServer(web.ServerWithMiddleware(LoginMiddlewareServerB))
 
 	// 我要求我这里，必须登录了才能看到，那该怎么办
