@@ -1,8 +1,9 @@
 package testdata
 
 import (
-    "database/sql"
     "gitee.com/geektime-geekbang/geektime-go/orm"
+
+    "database/sql"
 )
 
 const (

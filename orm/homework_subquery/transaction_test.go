@@ -109,5 +109,5 @@ func TestDBWithMiddleware(t *testing.T) {
 
 	_, err = NewSelector[TestModel](db).Get(context.Background())
 	assert.Equal(t, errors.New("mock error"), err)
-	assert.Equal(t, res ,string(res))
+	assert.Equal(t, "123" ,string(res))
 }
