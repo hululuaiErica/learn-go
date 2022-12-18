@@ -44,14 +44,11 @@ func LoginMiddlewareServerA(next web.HandleFunc) web.HandleFunc {
 			next(ctx)
 			return
 		}
-		// ssid，即 session id
-		//
+		redirect := fmt.Sprintf("http://sso.biz.com:8000/login?redirect=%s",
+			url.QueryEscape("http://a.biz.com:8081/profile"))
 		cookie, err := ctx.Req.Cookie("token")
 		if err != nil {
-			http.Redirect(ctx.Resp, ctx.Req,
-				fmt.Sprintf("http://sso.biz.com:8000/login?redirect=%s",
-					url.QueryEscape("http://a.biz.com:8081/profile")), 302)
-			ctx.RespServerError("你没有登录-token")
+			http.Redirect(ctx.Resp, ctx.Req, redirect, 302)
 			return
 		}
 
@@ -60,7 +57,7 @@ func LoginMiddlewareServerA(next web.HandleFunc) web.HandleFunc {
 		_, ok := sessions.Get(ssid)
 		if !ok {
 			// 你没有登录
-			ctx.RespServerError("你没有登录-sess id")
+			http.Redirect(ctx.Resp, ctx.Req, redirect, 302)
 			return
 		}
 		// 这边就是登录了
