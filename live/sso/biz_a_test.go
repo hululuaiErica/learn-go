@@ -2,9 +2,13 @@ package sso
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	web "gitee.com/geektime-geekbang/geektime-go/web"
+	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
+	"io"
+	"log"
 	"net/http"
 	"testing"
 	"time"
@@ -49,6 +53,27 @@ func testBizAServer(t *testing.T)  {
 			return
 		}
 		t.Log(req)
+		resp, err := (&http.Client{}).Do(req)
+		if err != nil {
+			_ = ctx.RespServerError("解析 token 失败")
+			return
+		}
+		tokensBs, _ := io.ReadAll(resp.Body)
+		var tokens Tokens
+		_ = json.Unmarshal(tokensBs, &tokens)
+		// 于是你就拿到了两个 token
+
+		// 往下要干嘛？
+		// 这里就是彻底的登录成功了
+		ssid := uuid.New().String()
+		aSessions.Set(ssid, tokens, time.Minute * 15)
+		ctx.SetCookie(&http.Cookie{
+			Name: "a_sessid",
+			Value: ssid,
+		})
+
+		// 你是要跳过去你最开始的 profile 那里
+		http.Redirect(ctx.Resp, ctx.Req,"http://aaa.com:8081/profile", 302)
 	})
 
 	err := server.Start(":8081")
@@ -60,12 +85,12 @@ func testBizAServer(t *testing.T)  {
 // 登录校验的 middleware
 func LoginMiddlewareServerA(next web.HandleFunc) web.HandleFunc {
 	return func(ctx *web.Context) {
-		if ctx.Req.URL.Path == "/login" {
+		if ctx.Req.URL.Path == "/token" {
 			next(ctx)
 			return
 		}
 		redirect := fmt.Sprintf("http://sso.com:8000/login?client_id=server_a")
-		cookie, err := ctx.Req.Cookie("token")
+		cookie, err := ctx.Req.Cookie("a_sessid")
 		if err != nil {
 			http.Redirect(ctx.Resp, ctx.Req, redirect, 302)
 			return
@@ -73,12 +98,13 @@ func LoginMiddlewareServerA(next web.HandleFunc) web.HandleFunc {
 
 		//var storageDriver ***
 		ssid := cookie.Value
-		_, ok := aSessions.Get(ssid)
+		tokens, ok := aSessions.Get(ssid)
 		if !ok {
 			// 你没有登录
 			http.Redirect(ctx.Resp, ctx.Req, redirect, 302)
 			return
 		}
+		log.Println(tokens)
 		// 这边就是登录了
 		next(ctx)
 	}

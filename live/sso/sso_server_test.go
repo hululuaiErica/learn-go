@@ -6,6 +6,7 @@ import (
 	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/require"
 	"html/template"
+	"io"
 	"net/http"
 	"testing"
 	"time"
@@ -16,7 +17,8 @@ var ssoSessions = cache.New(time.Minute * 15, time.Second)
 
 func TestSSOServer(t *testing.T) {
 	whiteList := map[string]string {
-		"server_a": "http://aaa.com:8081/profile",
+		"server_a": "http://aaa.com:8081/token",
+		"server_b": "http://bbb.com:8082/token",
 	}
 	tpl, err := template.ParseGlob("template/*.gohtml")
 	require.NoError(t, err)
@@ -25,8 +27,27 @@ func TestSSOServer(t *testing.T) {
 	}
 	server := web.NewHTTPServer(web.ServerWithTemplateEngine(engine))
 	server.Get("/login", func(ctx *web.Context) {
+		// 就在这里，你要判断有没有登录
+
+		ck, err := ctx.Req.Cookie("token")
 		clientId, _ := ctx.QueryValue("client_id")
-		_ = ctx.Render("login.gohtml", map[string]string{"ClientId": clientId})
+		if err != nil {
+			_ = ctx.Render("login.gohtml", map[string]string{"ClientId": clientId})
+			return
+		}
+
+		// 如果 client id 和已有 session 归属不同的主体，那么还是要重新登陆
+
+		_, ok := ssoSessions.Get(ck.Value)
+		if !ok {
+			_ = ctx.Render("login.gohtml", map[string]string{"ClientId": clientId})
+			return
+		}
+
+		// 直接颁发 token
+		token := uuid.New().String()
+		ssoSessions.Set(clientId, token, time.Minute)
+		http.Redirect(ctx.Resp, ctx.Req, whiteList[clientId] + "?token=" + token, 302)
 	})
 
 	server.Post("/login", func(ctx *web.Context) {
@@ -47,7 +68,6 @@ func TestSSOServer(t *testing.T) {
 				Name: "token",
 				Value: id,
 				Expires: time.Now().Add(time.Minute * 15),
-				Domain: "biz.com",
 			})
 			ssoSessions.Set(id, &User{Name: "Tom"}, time.Minute * 15)
 			token := uuid.New().String()
@@ -63,7 +83,41 @@ func TestSSOServer(t *testing.T) {
 	// 1. 频率限制：
 	// 2. 来源
 	server.Post("/token/validate", func(ctx *web.Context) {
-		
+		token, err := ctx.QueryValue("token")
+		if err != nil {
+			_ = ctx.RespServerError("拿不到 token")
+			return
+		}
+		signature, err := io.ReadAll( ctx.Req.Body)
+		if err != nil {
+			_ = ctx.RespServerError("拿不到签名")
+			return
+		}
+		clientId, _ := Decrypt(signature)
+
+		// 这里要干嘛？
+		val, ok := ssoSessions.Get(clientId)
+		// 放这里有隐患
+		//ssoSessions.Delete(clientId)
+		if !ok {
+			// 可能过期了，或者说这个 client id 根本没有过来登录
+			_ = ctx.RespServerError("没登录")
+			return
+		}
+		if token != val {
+			_ = ctx.RespServerError("token 不对")
+			return
+		}
+
+		// 只能使用一次
+		ssoSessions.Delete(clientId)
+
+		// 我应该给 a server 一些什么数据？
+		// access token + refresh token
+		_ = ctx.RespJSONOK(Tokens{
+			AccessToken: uuid.New().String(),
+			RefreshToken: uuid.New().String(),
+		})
 	})
 
 	go func() {
@@ -76,4 +130,10 @@ func TestSSOServer(t *testing.T) {
 
 	// 要在这里提供登录的地方
 	server.Start(":8000")
+}
+
+
+type Tokens struct {
+	AccessToken string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
 }

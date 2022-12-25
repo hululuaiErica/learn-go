@@ -1,9 +1,14 @@
 package sso
 
 import (
+	"bytes"
+	"encoding/json"
+	"fmt"
 	web "gitee.com/geektime-geekbang/geektime-go/web"
 	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
+	"io"
+	"log"
 	"net/http"
 	"testing"
 	"time"
@@ -27,63 +32,78 @@ func testBizBServer(t *testing.T)  {
 	// 那么就执行方法里面的逻辑
 	server.Get("/profile", func(ctx *web.Context) {
 		ctx.RespJSONOK(&User{
-			Name: "Tom",
+			Name: "Tom B",
 			Age: 18,
 		})
 	})
-
-	server.Post("/login", func(ctx *web.Context) {
-		// 我在这儿模拟登录
-		var u User
-		err := ctx.BindJSON(&u)
+	server.Get("/token", func(ctx *web.Context) {
+		token, err := ctx.QueryValue("token")
 		if err != nil {
-			ctx.RespServerError("系统错误")
-		}
-		// 校验账号和密码
-		if u.Name == "abc" && u.Password == "123" {
-			// 认为登录成功
-			// 要防止 token 被盗走，不能使用 uuid
-			id := uuid.New().String()
-			http.SetCookie(ctx.Resp, &http.Cookie{
-				Name: "token",
-				Value: id,
-				Expires: time.Now().Add(time.Minute * 15),
-			})
-			bSessions.Set(id, &User{Name: "Tom"}, time.Minute * 15)
-			ctx.RespJSONOK(&User{Name: "Tom"})
+			_ = ctx.RespServerError("token 不对")
 			return
 		}
-		ctx.RespServerError("用户账号名密码不对")
-	})
+		signature := Encrypt("server_b")
+		// 我拿到了这个 token
+		req, err := http.NewRequest(http.MethodPost,
+			"http://sso.com:8000/token/validate?token=" + token , bytes.NewBuffer([]byte(signature)))
+		if err != nil {
+			_ = ctx.RespServerError("解析 token 失败")
+			return
+		}
+		t.Log(req)
+		resp, err := (&http.Client{}).Do(req)
+		if err != nil {
+			_ = ctx.RespServerError("解析 token 失败")
+			return
+		}
+		tokensBs, _ := io.ReadAll(resp.Body)
+		var tokens Tokens
+		_ = json.Unmarshal(tokensBs, &tokens)
+		// 于是你就拿到了两个 token
 
+		// 往下要干嘛？
+		// 这里就是彻底的登录成功了
+		ssid := uuid.New().String()
+		bSessions.Set(ssid, tokens, time.Minute * 15)
+		ctx.SetCookie(&http.Cookie{
+			Name: "b_sessid",
+			Value: ssid,
+		})
+
+		// 你是要跳过去你最开始的 profile 那里
+
+		// 你是要跳过去你最开始的 profile 那里
+		http.Redirect(ctx.Resp, ctx.Req,"http://bbb.com:8082/profile", 302)
+	})
 	err := server.Start(":8082")
 	t.Log(err)
 }
 
 
 
+// 登录校验的 middleware
 func LoginMiddlewareServerB(next web.HandleFunc) web.HandleFunc {
 	return func(ctx *web.Context) {
-		if ctx.Req.URL.Path == "/login" {
+		if ctx.Req.URL.Path == "/token" {
 			next(ctx)
 			return
 		}
-		// ssid，即 session id
-		//
-		cookie, err := ctx.Req.Cookie("token")
+		redirect := fmt.Sprintf("http://sso.com:8000/login?client_id=server_b")
+		cookie, err := ctx.Req.Cookie("b_sessid")
 		if err != nil {
-			ctx.RespServerError("你没有登录-token")
+			http.Redirect(ctx.Resp, ctx.Req, redirect, 302)
 			return
 		}
 
 		//var storageDriver ***
 		ssid := cookie.Value
-		_, ok := ssoSessions.Get(ssid)
+		tokens, ok := bSessions.Get(ssid)
 		if !ok {
 			// 你没有登录
-			ctx.RespServerError("你没有登录-sess id")
+			http.Redirect(ctx.Resp, ctx.Req, redirect, 302)
 			return
 		}
+		log.Println(tokens)
 		// 这边就是登录了
 		next(ctx)
 	}

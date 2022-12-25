@@ -355,6 +355,25 @@ func (s *Selector[T]) Where(ps...Predicate) *Selector[T] {
 // 	return tp, err
 // }
 
+//func (s *Selector) GetFloat64(ctx context.Context) (float64, error) {
+//
+//}
+//
+//func (s *Selector[T]) Take(ctx context.Context, receiver any) (*T, error) {
+//	switch rec := receiver.(type) {
+//	case *float64:
+//		*rec = 12.3
+//	}
+//}
+//
+//func (s *Selector) GetSum(ctx context.Context) (float64, error) {
+//
+//}
+//
+//func (s *Selector) GetAsValue(ctx context.Context) (StringValue, error) {
+//
+//}
+
 func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 	var err error
 	s.model, err = s.r.Get(new(T))

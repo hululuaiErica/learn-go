@@ -13,7 +13,7 @@ func Encrypt(clintId string) string {
 }
 
 // Decrypt 模拟解密
-func Decrypt(signature string) (clientId string, err error) {
-	seg := strings.Split(signature, ":")
+func Decrypt(signature []byte) (clientId string, err error) {
+	seg := strings.Split(string(signature), ":")
 	return seg[0], nil
 }
