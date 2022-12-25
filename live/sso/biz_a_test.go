@@ -1,15 +1,18 @@
 package sso
 
 import (
+	"bytes"
 	"fmt"
 	web "gitee.com/geektime-geekbang/geektime-go/web"
+	"github.com/patrickmn/go-cache"
 	"net/http"
 	"testing"
+	"time"
 )
 
-// var sessions = map[string]any{}
-//var aSessions = cache.New(time.Minute * 15, time.Second)
-var aSessions = sessions
+// var ssoSessions = map[string]any{}
+var aSessions = cache.New(time.Minute * 15, time.Second)
+//var aSessions = ssoSessions
 
 // 使用 Redis
 
@@ -31,19 +34,37 @@ func testBizAServer(t *testing.T)  {
 		})
 	})
 
+	server.Get("/token", func(ctx *web.Context) {
+		token, err := ctx.QueryValue("token")
+		if err != nil {
+			_ = ctx.RespServerError("token 不对")
+			return
+		}
+		signature := Encrypt("server_a")
+		// 我拿到了这个 token
+		req, err := http.NewRequest(http.MethodPost,
+			"http://sso.com:8000/token/validate?token=" + token , bytes.NewBuffer([]byte(signature)))
+		if err != nil {
+			_ = ctx.RespServerError("解析 token 失败")
+			return
+		}
+		t.Log(req)
+	})
+
 	err := server.Start(":8081")
 	t.Log(err)
 }
 
 
 
+// 登录校验的 middleware
 func LoginMiddlewareServerA(next web.HandleFunc) web.HandleFunc {
 	return func(ctx *web.Context) {
 		if ctx.Req.URL.Path == "/login" {
 			next(ctx)
 			return
 		}
-		redirect := fmt.Sprintf("http://sso.biz.com:8000/login?client_id=server_a")
+		redirect := fmt.Sprintf("http://sso.com:8000/login?client_id=server_a")
 		cookie, err := ctx.Req.Cookie("token")
 		if err != nil {
 			http.Redirect(ctx.Resp, ctx.Req, redirect, 302)

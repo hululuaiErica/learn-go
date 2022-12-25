@@ -3,6 +3,7 @@ package sso
 import (
 	"gitee.com/geektime-geekbang/geektime-go/web"
 	"github.com/google/uuid"
+	"github.com/patrickmn/go-cache"
 	"github.com/stretchr/testify/require"
 	"html/template"
 	"net/http"
@@ -10,9 +11,12 @@ import (
 	"time"
 )
 
+// var ssoSessions = map[string]any{}
+var ssoSessions = cache.New(time.Minute * 15, time.Second)
+
 func TestSSOServer(t *testing.T) {
 	whiteList := map[string]string {
-		"server_a": "http://a.biz.com:8081/profile",
+		"server_a": "http://aaa.com:8081/profile",
 	}
 	tpl, err := template.ParseGlob("template/*.gohtml")
 	require.NoError(t, err)
@@ -24,10 +28,12 @@ func TestSSOServer(t *testing.T) {
 		clientId, _ := ctx.QueryValue("client_id")
 		_ = ctx.Render("login.gohtml", map[string]string{"ClientId": clientId})
 	})
+
 	server.Post("/login", func(ctx *web.Context) {
 		// 我在这儿模拟登录
 		if err != nil {
 			ctx.RespServerError("系统错误")
+			return
 		}
 		// 校验账号和密码
 		email, _ := ctx.FormValue("email")
@@ -43,11 +49,21 @@ func TestSSOServer(t *testing.T) {
 				Expires: time.Now().Add(time.Minute * 15),
 				Domain: "biz.com",
 			})
-			sessions.Set(id, &User{Name: "Tom"}, time.Minute * 15)
-			http.Redirect(ctx.Resp, ctx.Req, whiteList[clientId], 302)
+			ssoSessions.Set(id, &User{Name: "Tom"}, time.Minute * 15)
+			token := uuid.New().String()
+			ssoSessions.Set(clientId, token, time.Minute)
+			http.Redirect(ctx.Resp, ctx.Req, whiteList[clientId] + "?token=" + token, 302)
 			return
 		}
 		ctx.RespServerError("用户账号名密码不对")
+	})
+
+	// 我要提供一个校验 token 的接口，怎么提供？
+	// 谁都可以发，怎么保护这里？？？？
+	// 1. 频率限制：
+	// 2. 来源
+	server.Post("/token/validate", func(ctx *web.Context) {
+		
 	})
 
 	go func() {

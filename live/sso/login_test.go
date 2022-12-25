@@ -3,14 +3,12 @@ package sso
 import (
 	web "gitee.com/geektime-geekbang/geektime-go/web"
 	"github.com/google/uuid"
-	"github.com/patrickmn/go-cache"
 	"net/http"
 	"testing"
 	"time"
 )
 
-// var sessions = map[string]any{}
-var sessions = cache.New(time.Minute * 15, time.Second)
+
 // 使用 Redis
 
 // 我要先启动一个业务服务器
@@ -48,7 +46,7 @@ func TestBizServer(t *testing.T)  {
 				Value: id,
 				Expires: time.Now().Add(time.Minute * 15),
 			})
-			sessions.Set(id, &User{Name: "Tom"}, time.Minute * 15)
+			ssoSessions.Set(id, &User{Name: "Tom"}, time.Minute * 15)
 			ctx.RespJSONOK(&User{Name: "Tom"})
 			return
 		}
@@ -105,7 +103,7 @@ func LoginMiddleware(next web.HandleFunc) web.HandleFunc {
 
 		//var storageDriver ***
 		ssid := cookie.Value
-		_, ok := sessions.Get(ssid)
+		_, ok := ssoSessions.Get(ssid)
 		if !ok {
 			// 你没有登录
 			ctx.RespServerError("你没有登录-sess id")
