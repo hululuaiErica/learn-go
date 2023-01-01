@@ -124,7 +124,7 @@ func LoginMiddlewareServerGeekbang(next web.HandleFunc) web.HandleFunc {
 			next(ctx)
 			return
 		}
-		redirect := fmt.Sprintf("http://auth.com:8000/auth?client_id=server_geek&scope=basic")
+		redirect := fmt.Sprintf("http://auth.com:8000/auth?type=code&client_id=server_geek&scope=basic")
 		cookie, err := ctx.Req.Cookie("geek_sessid")
 		if err != nil {
 			_ = ctx.Render("login_geek.gohtml", map[string]string{"RedirectURL": redirect})
