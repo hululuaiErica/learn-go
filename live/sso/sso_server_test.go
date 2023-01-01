@@ -1,6 +1,7 @@
 package sso
 
 import (
+	"fmt"
 	"gitee.com/geektime-geekbang/geektime-go/web"
 	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
@@ -29,7 +30,7 @@ func TestSSOServer(t *testing.T) {
 	server.Get("/login", func(ctx *web.Context) {
 		// 就在这里，你要判断有没有登录
 
-		ck, err := ctx.Req.Cookie("token")
+
 		clientId, _ := ctx.QueryValue("client_id")
 		if err != nil {
 			_ = ctx.Render("login.gohtml", map[string]string{"ClientId": clientId})
@@ -38,7 +39,18 @@ func TestSSOServer(t *testing.T) {
 
 		// 如果 client id 和已有 session 归属不同的主体，那么还是要重新登陆
 
+		// 假如说这里 client id 归属不同的主体，怎么处理了？
+
+		ck, err := ctx.Req.Cookie(fmt.Sprintf("token"))
+		if err != nil {
+			_ = ctx.Render("login.gohtml", map[string]string{"ClientId": clientId})
+			return
+		}
+
+		// 就是要建立一个 client_id 到 session 的映射
+
 		_, ok := ssoSessions.Get(ck.Value)
+		//_, ok := ssoSessions.Get(clientId)
 		if !ok {
 			_ = ctx.Render("login.gohtml", map[string]string{"ClientId": clientId})
 			return
@@ -135,5 +147,6 @@ func TestSSOServer(t *testing.T) {
 
 type Tokens struct {
 	AccessToken string `json:"access_token"`
+	AccessTokenExpiration float64 `json:"access_token_expiration"`
 	RefreshToken string `json:"refresh_token"`
 }

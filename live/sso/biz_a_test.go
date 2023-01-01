@@ -109,3 +109,5 @@ func LoginMiddlewareServerA(next web.HandleFunc) web.HandleFunc {
 		next(ctx)
 	}
 }
+
+// https://account.geekbang.org/account/oauth/callback?type=wechat&ident=d0435d&login=0&cip=0&redirect=https%3A%2F%2Faccount.geekbang.org%2Fthirdlogin%3Fremember%3D1%26type%3Dwechat%26is_bind%3D0%26gk_cus_user_wechat%3Duniversity%26platform%3Dtime%26wechat%3Dwechatuniversity%26redirect%3Dhttps%253A%252F%252Fu.geekbang.org%252F%26failedurl%3Dhttps%3A%2F%2Faccount.geekbang.org%2Fsignin%3Fgk_cus_user_wechat%3Duniversity%26redirect%3Dhttps%253A%252F%252Fu.geekbang.org%252F&code=091Fsi100L89dP1NOX30023fhp3Fsi13&state=31c542e1a6778b0f9c4fef86b96ba4a8
