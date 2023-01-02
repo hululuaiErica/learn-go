@@ -111,9 +111,9 @@ func (r *ReadThroughCacheV1[T]) Get(ctx context.Context, key string) (T, error) 
 			//_ = r.Cache.Set(ctx, key, val, r.Expiration)
 			er := r.Cache.Set(ctx, key, val, r.Expiration)
 			if er != nil {
-				return val, fmt.Errorf("%w, 原因：%s", ErrFailedToRefreshCache, er.Error())
+				return val.(T), fmt.Errorf("%w, 原因：%s", ErrFailedToRefreshCache, er.Error())
 			}
 		}
 	}
-	return val, err
+	return val.(T), err
 }

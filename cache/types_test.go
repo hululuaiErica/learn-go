@@ -6,7 +6,7 @@ package cache
 //}
 
 type User struct {
-
+	Name string
 }
 
 type Order struct {
