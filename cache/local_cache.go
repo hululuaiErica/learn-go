@@ -74,6 +74,10 @@ func BuildInMapCacheWithEvictedCallback(fn func(key string, val any)) BuildInMap
 func (b *BuildInMapCache) Set(ctx context.Context, key string, val any, expiration time.Duration) error {
 	b.mutex.Lock()
 	defer b.mutex.Unlock()
+	return b.set(key, val, expiration)
+}
+
+func (b *BuildInMapCache) set(key string, val any, expiration time.Duration) error {
 	var dl time.Time
 	if expiration >0 {
 		dl = time.Now().Add(expiration)
