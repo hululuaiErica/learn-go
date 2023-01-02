@@ -16,6 +16,8 @@ type Cache interface {
 	Delete(ctx context.Context, key string) error
 	// 同时会把被删除的数据返回
 	// Delete(key string) (any, error)
+
+	LoadAndDelete(ctx context.Context, key string) (any, error)
 }
 
 type CacheV2[T any] interface {
