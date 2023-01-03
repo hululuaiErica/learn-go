@@ -22,7 +22,7 @@ type ReadThroughCache struct {
 	//loadFunc func(ctx context.Context, key string) (any, error)
 	//LoadFunc func(key string) (any, error)
 	//logFunc func()
-	g singleflight.Group
+	//g singleflight.Group
 }
 
 func (r *ReadThroughCache) Get(ctx context.Context, key string) (any, error) {
@@ -74,23 +74,23 @@ func (r *ReadThroughCache) GetV2(ctx context.Context, key string) (any, error) {
 	return val, err
 }
 
-func (r *ReadThroughCache) GetV3(ctx context.Context, key string) (any, error) {
-	val, err := r.Cache.Get(ctx, key)
-	if err == errKeyNotFound {
-		val, err, _ = r.g.Do(key, func() (interface{}, error) {
-			v, er := r.LoadFunc(ctx, key)
-			if er == nil {
-				//_ = r.Cache.Set(ctx, key, val, r.Expiration)
-				er = r.Cache.Set(ctx, key, val, r.Expiration)
-				if er != nil {
-					return v, fmt.Errorf("%w, 原因：%s", ErrFailedToRefreshCache, er.Error())
-				}
-			}
-			return v, er
-		})
-	}
-	return val, err
-}
+//func (r *ReadThroughCache) GetV3(ctx context.Context, key string) (any, error) {
+//	val, err := r.Cache.Get(ctx, key)
+//	if err == errKeyNotFound {
+//		val, err, _ = r.g.Do(key, func() (interface{}, error) {
+//			v, er := r.LoadFunc(ctx, key)
+//			if er == nil {
+//				//_ = r.Cache.Set(ctx, key, val, r.Expiration)
+//				er = r.Cache.Set(ctx, key, val, r.Expiration)
+//				if er != nil {
+//					return v, fmt.Errorf("%w, 原因：%s", ErrFailedToRefreshCache, er.Error())
+//				}
+//			}
+//			return v, er
+//		})
+//	}
+//	return val, err
+//}
 
 
 type ReadThroughCacheV1[T any] struct {
