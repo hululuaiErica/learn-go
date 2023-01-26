@@ -3,7 +3,6 @@ package rpc
 import (
 	"context"
 	"errors"
-	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/message"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -38,11 +37,11 @@ func Test_setFuncField(t *testing.T) {
 			name:"user service",
 			mock: func(ctrl *gomock.Controller) Proxy {
 				p := NewMockProxy(ctrl)
-				p.EXPECT().Invoke(gomock.Any(), &message.Request{
+				p.EXPECT().Invoke(gomock.Any(), &Request{
 					ServiceName: "user-service",
-					MethodName:  "GetById",
-					Data:        []byte(`{"Id":123}`),
-				}).Return(&message.Response{}, nil)
+					MethodName: "GetById",
+					Arg: []byte(`{"Id":123}`),
+				}).Return(&Response{}, nil)
 				return p
 			},
 			service: &UserService{},

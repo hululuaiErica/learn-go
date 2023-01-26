@@ -25,15 +25,14 @@ type GetByIdResp struct {
 }
 
 type UserServiceServer struct {
-	Err error
-	Msg string
+
 }
 
 func (u *UserServiceServer) GetById(ctx context.Context, req *GetByIdReq) (*GetByIdResp, error) {
 	log.Println(req)
 	return &GetByIdResp{
-		Msg: u.Msg,
-	}, u.Err
+		Msg: "hello, world",
+	}, nil
 }
 
 func (u *UserServiceServer) Name() string {

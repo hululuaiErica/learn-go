@@ -33,7 +33,7 @@ type Predicate struct {
 // 	return Predicate{
 // 		Column: column,
 // 		Op: "=",
-// 		Arg: right,
+// 		Data: right,
 // 	}
 // }
 

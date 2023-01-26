@@ -1,23 +1,15 @@
 package rpc
 
-import "context"
+import (
+	"context"
+	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/message"
+)
 
 type Service interface {
 	Name() string
 }
 
 type Proxy interface {
-	Invoke(ctx context.Context, req *Request) (*Response, error)
+	Invoke(ctx context.Context, req *message.Request) (*message.Response, error)
 }
 
-
-
-type Request struct {
-	ServiceName string
-	MethodName string
-	Arg []byte
-}
-
-type Response struct {
-	Data []byte
-}
