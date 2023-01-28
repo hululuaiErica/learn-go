@@ -49,11 +49,16 @@ func setFuncField(service Service, p Proxy, s serialize.Serializer) error {
 				if err != nil {
 					return []reflect.Value{retVal, reflect.ValueOf(err)}
 				}
+				var meta map[string]string
+				if isOneway(ctx) {
+					meta = map[string]string{"one-way": "true"}
+				}
 				req := &message.Request{
 					ServiceName: service.Name(),
 					MethodName:  fieldTyp.Name,
 					Data:        reqData,
 					Serializer: s.Code(),
+					Meta: meta,
 				}
 
 				req.CalculateHeaderLength()
@@ -140,25 +145,28 @@ func NewClient(addr string, opts...ClientOption) (*Client, error) {
 func (c *Client) Invoke(ctx context.Context, req *message.Request) (*message.Response, error) {
 	data := message.EncodeReq(req)
 	// 正儿八经地把请求发过去服务端
-	resp, err := c.Send(data)
+	resp, err := c.send(ctx, data)
 	if err != nil {
 		return nil, err
 	}
 	return message.DecodeResp(resp), nil
 }
 
-func (c *Client) Send(data []byte) ([]byte, error) {
+func (c *Client) send(ctx context.Context, data []byte) ([]byte, error) {
 	val, err := c.pool.Get()
 	if err != nil {
 		return nil, err
 	}
 	conn := val.(net.Conn)
 	defer func() {
-		_ = conn.Close()
+		c.pool.Put(val)
 	}()
 	_, err = conn.Write(data)
 	if err != nil {
 		return nil, err
+	}
+	if isOneway(ctx) {
+		return nil, errors.New("micro: 这是一个 oneway 调用，你不应该处理任何结果")
 	}
 	return ReadMsg(conn)
 }

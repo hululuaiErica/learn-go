@@ -127,7 +127,7 @@ func (c *Client) Send(data []byte) ([]byte, error) {
 	}
 	conn := val.(net.Conn)
 	defer func() {
-		_ = conn.Close()
+		c.pool.Put(val)
 	}()
 	req := EncodeMsg(data)
 	_, err = conn.Write(req)
