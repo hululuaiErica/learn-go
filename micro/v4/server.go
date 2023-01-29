@@ -6,11 +6,8 @@ import (
 	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/message"
 	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/serialize"
 	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/serialize/json"
-	"log"
 	"net"
 	"reflect"
-	"strconv"
-	"time"
 )
 
 type Server struct {
@@ -76,21 +73,11 @@ func (s *Server) handleConn(conn net.Conn) error {
 			return err
 		}
 		ctx := context.Background()
-		cancel := func() {}
-		log.Println(req.Meta)
-		if deadlineStr, ok := req.Meta["deadline"]; ok {
-			log.Println(deadlineStr)
-			if deadline, er := strconv.ParseInt(deadlineStr, 10, 64); er == nil {
-				log.Println(deadline)
-				ctx, cancel = context.WithDeadline(ctx, time.UnixMilli(deadline))
-			}
-		}
 		oneway, ok := req.Meta["one-way"]
 		if ok && oneway == "true" {
 			ctx = CtxWithOneway(ctx)
 		}
 		resp, err := s.Invoke(ctx, req)
-		cancel()
 		if err != nil {
 			// 处理业务 error
 			resp.Error = []byte(err.Error())
@@ -98,8 +85,8 @@ func (s *Server) handleConn(conn net.Conn) error {
 
 		resp.CalculateHeaderLength()
 		resp.CalculateBodyLength()
-		_, err = conn.Write(message.EncodeResp(resp))
 
+		_, err = conn.Write(message.EncodeResp(resp))
 		if err != nil {
 			return err
 		}
@@ -157,7 +144,8 @@ func (s *reflectionStub) invoke(ctx context.Context, req *message.Request) ([]by
 	// 反射找到方法，并且执行调用
 	method := s.value.MethodByName(req.MethodName)
 	in := make([]reflect.Value, 2)
-	in[0]= reflect.ValueOf(ctx)
+	// 暂时我们不知道怎么传这个 context，所以我们就直接写死
+	in[0]= reflect.ValueOf(context.Background())
 	inReq := reflect.New(method.Type().In(1).Elem())
 	serializer, ok := s.serializers[req.Serializer]
 	if !ok {

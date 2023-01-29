@@ -9,7 +9,6 @@ import (
 	"github.com/silenceper/pool"
 	"net"
 	"reflect"
-	"strconv"
 	"time"
 )
 
@@ -50,15 +49,9 @@ func setFuncField(service Service, p Proxy, s serialize.Serializer) error {
 				if err != nil {
 					return []reflect.Value{retVal, reflect.ValueOf(err)}
 				}
-
-				meta := make(map[string]string, 2)
-				// 我确实设置了超时
-				if deadline, ok := ctx.Deadline(); ok {
-					meta["deadline"] = strconv.FormatInt(deadline.UnixMilli(), 10)
-				}
-
+				var meta map[string]string
 				if isOneway(ctx) {
-					meta["one-way"] = "true"
+					meta = map[string]string{"one-way": "true"}
 				}
 				req := &message.Request{
 					ServiceName: service.Name(),
@@ -150,42 +143,12 @@ func NewClient(addr string, opts...ClientOption) (*Client, error) {
 }
 
 func (c *Client) Invoke(ctx context.Context, req *message.Request) (*message.Response, error) {
-	if ctx.Err() != nil {
-		return nil, ctx.Err()
-	}
-
-	ch := make(chan struct{})
-	defer func() {
-		close(ch)
-	}()
-	var (
-		resp *message.Response
-		err error
-	)
-	go func() {
-		resp , err = c.doInvoke(ctx, req)
-		ch <- struct{}{}
-	}()
-
-	select {
-	case <- ctx.Done():
-		return nil, ctx.Err()
-	case <- ch:
-		return resp, err
-	}
-}
-
-func (c *Client) doInvoke(ctx context.Context, req *message.Request) (*message.Response, error){
 	data := message.EncodeReq(req)
 	// 正儿八经地把请求发过去服务端
 	resp, err := c.send(ctx, data)
 	if err != nil {
 		return nil, err
 	}
-	// 这里才算是中断
-	//if ctx.Err() != nil {
-	//	return nil, ctx.Err()
-	//}
 	return message.DecodeResp(resp), nil
 }
 
