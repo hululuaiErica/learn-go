@@ -9,5 +9,6 @@ type ShardingDB struct {
 
 type MasterSlavesDB struct {
 	Master *sql.DB
+	//Table []string
 	Slaves []*sql.DB
 }

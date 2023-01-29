@@ -104,6 +104,8 @@ func (s *ShardingSelector[T]) findDsts() ([]Dst, error){
 		return s.findDstByPredicate(p)
 	}
 	// 这边是要广播
+	panic("implement me")
+	//return s.model.Sf.Broadcast(), nil
 }
 
 // WHERE id = 11 AND user_id = 123
@@ -145,13 +147,12 @@ func (s *ShardingSelector[T]) findDstByPredicate(p Predicate) ([]Dst, error) {
 	case opEQ:
 		left, ok := p.left.(Column)
 		if ok {
-			_, isSK := s.model.Sks[left.name]
 			// WHERE id = 123
 			right, ok := p.right.(value)
 			if !ok {
 				return nil, errors.New("太复杂的查询，暂时不支持")
 			}
-			if isSK && ok {
+			if s.model.Sk == left.name && ok {
 				db, tbl := s.model.Sf(right.val)
 				res = append(res, Dst{DB: db, Table: tbl})
 			}
@@ -164,9 +165,6 @@ func (s *ShardingSelector[T]) findDstByPredicate(p Predicate) ([]Dst, error) {
 
 func (s *ShardingSelector[T]) merge(left, right []Dst) []Dst {
 	res := make([]Dst, 0, len(left) + len(right))
-	for _, l := range left {
-		res = append(res, l)
-	}
 	for _, r := range right {
 		exist := false
 		for _, l := range left {
@@ -174,7 +172,7 @@ func (s *ShardingSelector[T]) merge(left, right []Dst) []Dst {
 				exist = true
 			}
 		}
-		if !exist {
+		if exist {
 			res = append(res, r)
 		}
 	}
@@ -277,4 +275,8 @@ func (s *ShardingSelector[T]) buildExpression(expr Expression) error {
 		return errs.NewErrUnsupportedExpression(expr)
 	}
 	return nil
+}
+
+func (s *ShardingSelector[T]) GetMulti() ([]*T, error) {
+
 }

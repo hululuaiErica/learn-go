@@ -26,12 +26,19 @@ type Model struct {
 	ColumnMap map[string]*Field
 
 	// 我放到这里，我该怎么定义？
-	Sks map[string]struct{}
+	//Sks map[string]struct{}
+	Sk string
 	Sf ShardingFunc
 }
 
 //type ShardingFunc func(skVals map[string]any) (string, string)
 type ShardingFunc func(skVal any) (string, string)
+
+//type ShardingAlgorithm interface {
+//	Sharding(skVal any) (string, string)
+// 我这个方法是为了解决分库分表的广播问题
+//	AllNodes() []Dst
+//}
 
 //type ShardingFuncV1 func(ps ShardingPredicate) []Dst
 //
