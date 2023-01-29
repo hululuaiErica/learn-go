@@ -1,9 +1,13 @@
+//go:build sharding
 package orm
 
 import (
+	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"gitee.com/geektime-geekbang/geektime-go/orm/internal/errs"
+	"golang.org/x/sync/errgroup"
 	"strings"
 )
 
@@ -15,6 +19,12 @@ type ShardingSelector[T any] struct {
 
 	sess Session
 	db *ShardingDB
+
+	// 这边需要有一个查询特征的东西
+	isDistinct bool
+	orderBy []string
+	offset int
+	limit int
 }
 
 //type ShardingFunc[T ShardingKey] func(skVal T) (string, string)
@@ -32,11 +42,15 @@ type ShardingSelector[T any] struct {
 //type Int32 int32
 //var a ShardingFunc[Int32]
 
-
+type ShardingQuery struct {
+	SQL string
+	Args []any
+	DB string
+}
 
 // k 是 sharding key
 // fn 就是分库分表的算法
-func (s *ShardingSelector[T]) Build() ([]*Query, error) {
+func (s *ShardingSelector[T]) Build() ([]*ShardingQuery, error) {
 	if s.model == nil {
 		var err error
 		s.model, err = s.r.Get(new(T))
@@ -49,7 +63,7 @@ func (s *ShardingSelector[T]) Build() ([]*Query, error) {
 	if err != nil {
 		return nil, err
 	}
-	res := make([]*Query, 0, len(dsts))
+	res := make([]*ShardingQuery, 0, len(dsts))
 	for _, dst := range dsts {
 		q, err := s.build(dst.DB, dst.Table)
 		if err != nil {
@@ -61,7 +75,7 @@ func (s *ShardingSelector[T]) Build() ([]*Query, error) {
 	return res, nil
 }
 
-func (s *ShardingSelector[T]) build(db, tbl string) (*Query, error) {
+func (s *ShardingSelector[T]) build(db, tbl string) (*ShardingQuery, error) {
 	s.sb.WriteString("SELECT ")
 
 	if err := s.buildColumns(); err != nil {
@@ -84,9 +98,10 @@ func (s *ShardingSelector[T]) build(db, tbl string) (*Query, error) {
 	}
 
 	s.sb.WriteByte(';')
-	return &Query{
+	return &ShardingQuery{
 		SQL: s.sb.String(),
 		Args: s.args,
+		DB: db,
 	}, nil
 }
 
@@ -203,6 +218,10 @@ func (s *ShardingSelector[T]) buildColumns() error {
 				return err
 			}
 		case Aggregate:
+			//switch c.fn {
+			//case "AVG":
+				// 支持 COUNT(DISTINCT)
+			//}
 			// 聚合函数名
 			s.sb.WriteString(c.fn)
 			s.sb.WriteByte('(')
@@ -278,6 +297,56 @@ func (s *ShardingSelector[T]) buildExpression(expr Expression) error {
 	return nil
 }
 
-func (s *ShardingSelector[T]) GetMulti() ([]*T, error) {
+func (s *ShardingSelector[T]) GetMulti(ctx context.Context) ([]*T, error) {
+	qs, err := s.Build()
+	if err != nil {
+		return nil, err
+	}
+	var resSlice []*sql.Rows
+	var eg errgroup.Group
+	for _, query := range qs {
+		q :=query
+		eg.Go(func() error {
+			db, ok := s.db.DBs[q.DB]
+			if !ok {
+				// 可能是用户配置不对
+				// 也可能是你框架代码不对
+				return errors.New("orm: 非法的目标库")
+			}
+			// 要决策用 master 还是 slave
+			rows, err := db.query(ctx, q.SQL, q.Args...)
+			if err == nil {
+				resSlice = append(resSlice, rows)
+			}
+			return err
+		})
+	}
+	err = eg.Wait()
+	if err != nil {
+		return nil, err
+	}
+	// 你已经把所有的结果取过来了
 
+	//if s.isDistinct {
+		// 你要在这里，去重（一般都是排序之后去重，或者用 map）
+	//}
+
+	//if s.limit > 0 {
+
+	//}
+
+	// 在这里合并结果集了
+	var res []*T
+	for _, rows := range resSlice {
+		for rows.Next() {
+			t := new(T)
+			val := s.creator(s.model, t)
+			err = val.SetColumns(rows)
+			if err != nil {
+				return nil, err
+			}
+			res = append(res, t)
+		}
+	}
+	return res, nil
 }

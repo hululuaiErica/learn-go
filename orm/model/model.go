@@ -26,6 +26,7 @@ type Model struct {
 	ColumnMap map[string]*Field
 
 	// 我放到这里，我该怎么定义？
+	// 以下字段是直播课程的内容，可以忽略
 	//Sks map[string]struct{}
 	Sk string
 	Sf ShardingFunc
