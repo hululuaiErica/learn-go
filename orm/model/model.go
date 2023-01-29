@@ -24,6 +24,37 @@ type Model struct {
 	FieldMap map[string]*Field
 	// 列名到字段定义的映射
 	ColumnMap map[string]*Field
+
+	// 我放到这里，我该怎么定义？
+	Sks map[string]struct{}
+	Sf ShardingFunc
+}
+
+//type ShardingFunc func(skVals map[string]any) (string, string)
+type ShardingFunc func(skVal any) (string, string)
+
+//type ShardingFuncV1 func(ps ShardingPredicate) []Dst
+//
+//type ShardingPredicate struct {
+//	Op op
+//	Val any
+//}
+//
+//type RangeShardingPredicate struct {
+//	Op op
+//	Val any
+//	Min any
+//	Max na
+//}
+//
+//type HashShardingPredicate struct {
+//	Op op
+//	Val any
+//}
+
+type Dst struct {
+	DB string
+	Table string
 }
 
 type Option func(m *Model) error
