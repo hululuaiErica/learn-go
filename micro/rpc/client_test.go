@@ -7,6 +7,7 @@ import (
 	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/serialize/json"
 	"github.com/golang/mock/gomock"
 	"github.com/stretchr/testify/assert"
+	_ "google.golang.org/grpc/resolver"
 	"testing"
 )
 
