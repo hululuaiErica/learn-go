@@ -14,6 +14,7 @@ type ShardingSelector[T any] struct {
 	columns []Selectable
 
 	sess Session
+	db *ShardingDB
 }
 
 //type ShardingFunc[T ShardingKey] func(skVal T) (string, string)
