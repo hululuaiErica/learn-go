@@ -1,3 +1,4 @@
+//go:build sharding
 package orm
 
 import (
