@@ -1,5 +1,3 @@
-//go:build answer
-
 package service
 
 import (
