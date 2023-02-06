@@ -58,6 +58,7 @@ func (s *Server) Start(addr string) error {
 			//_ = s.registry.UnRegister(registry.ServiceInstance{})
 		//}()
 	}
+
 	err = s.Serve(listener)
 	return err
 }
