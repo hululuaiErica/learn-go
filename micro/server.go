@@ -16,6 +16,7 @@ type Server struct {
 	registerTimeout time.Duration
 	*grpc.Server
 	listener net.Listener
+	weight uint32
 }
 
 func NewServer(name string, opts...ServerOption) (*Server, error) {
@@ -28,6 +29,12 @@ func NewServer(name string, opts...ServerOption) (*Server, error) {
 		opt(res)
 	}
 	return res, nil
+}
+
+func ServerWithWeight(weight uint32) ServerOption {
+	return func(server *Server) {
+		server.weight = weight
+	}
 }
 
 // Start 当用户调用这个方法的时候，就是服务已经准备好
