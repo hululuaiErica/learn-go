@@ -17,6 +17,8 @@ type FixWindowLimiter struct {
 	rate int64
 	cnt int64
 	//mutex sync.Mutex
+
+	//onReject rejectStrategy
 }
 
 func NewFixWindowLimiter(interval time.Duration, rate int64) *FixWindowLimiter {
@@ -46,6 +48,7 @@ func (t *FixWindowLimiter) BuildServerInterceptor() grpc.UnaryServerInterceptor 
 		if cnt > t.rate {
 			err = errors.New("触发瓶颈了")
 			return
+			//return t.onReject(ctx, req, info, handler)
 		}
 		resp, err = handler(ctx, req)
 		return

@@ -47,6 +47,12 @@ type UserServiceServer struct {
 }
 
 func (s UserServiceServer) GetById(ctx context.Context, req *gen.GetByIdReq) (*gen.GetByIdResp, error) {
+	//go func() {
+	// 转异步
+	//	fmt.Println(s.group)
+	//	// 做一些事情
+	//}()
+	// 返回一个 202
 	fmt.Println(s.group)
 	return &gen.GetByIdResp{
 		User: &gen.User{
