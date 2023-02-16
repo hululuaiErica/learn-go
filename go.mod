@@ -8,7 +8,7 @@ require (
 	github.com/gin-contrib/sessions v0.0.5
 	github.com/gin-gonic/gin v1.8.1
 	github.com/go-redis/redis/v9 v9.0.0-rc.2
-	github.com/go-sql-driver/mysql v1.6.0
+	github.com/go-sql-driver/mysql v1.7.0
 	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/sessions v1.2.1
@@ -18,6 +18,7 @@ require (
 	github.com/labstack/echo-contrib v0.13.0
 	github.com/labstack/echo/v4 v4.9.1
 	github.com/mattn/go-sqlite3 v2.0.3+incompatible
+	github.com/opentracing/opentracing-go v1.2.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/prometheus/client_golang v1.12.2
 	github.com/silenceper/pool v1.0.0
@@ -28,9 +29,14 @@ require (
 	go.opentelemetry.io/otel/exporters/zipkin v1.11.1
 	go.opentelemetry.io/otel/sdk v1.11.1
 	go.opentelemetry.io/otel/trace v1.11.1
+	go.uber.org/zap v1.17.0
+	golang.org/x/crypto v0.0.0-20221010152910-d6f0a8c073c2
 	golang.org/x/sync v0.0.0-20220819030929-7fc1605a5dde
 	google.golang.org/grpc v1.50.0
 	google.golang.org/protobuf v1.28.1
+	gorm.io/driver/mysql v1.4.6
+	gorm.io/driver/sqlite v1.1.4
+	gorm.io/gorm v1.23.8
 )
 
 require (
@@ -66,6 +72,8 @@ require (
 	github.com/iris-contrib/jade v1.1.3 // indirect
 	github.com/iris-contrib/pongo2 v0.0.1 // indirect
 	github.com/iris-contrib/schema v0.0.1 // indirect
+	github.com/jinzhu/inflection v1.0.0 // indirect
+	github.com/jinzhu/now v1.1.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/kataras/golog v0.0.10 // indirect
 	github.com/kataras/pio v0.0.2 // indirect
@@ -108,8 +116,6 @@ require (
 	go.etcd.io/etcd/client/pkg/v3 v3.5.4 // indirect
 	go.uber.org/atomic v1.9.0 // indirect
 	go.uber.org/multierr v1.6.0 // indirect
-	go.uber.org/zap v1.17.0 // indirect
-	golang.org/x/crypto v0.0.0-20221010152910-d6f0a8c073c2 // indirect
 	golang.org/x/net v0.2.0 // indirect
 	golang.org/x/sys v0.2.0 // indirect
 	golang.org/x/text v0.4.0 // indirect
