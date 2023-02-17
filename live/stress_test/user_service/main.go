@@ -1,12 +1,14 @@
 package main
 
 import (
-	"fmt"
 	"gitee.com/geektime-geekbang/geektime-go/cache"
+	userapi "gitee.com/geektime-geekbang/geektime-go/live/stress_test/api/user/gen"
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/repository"
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/repository/dao"
+	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/service"
+	"google.golang.org/grpc"
 	"gorm.io/gorm"
-
+	"net"
 	//rstore "gitee.com/geektime-geekbang/geektime-go/web/session/redis"
 	"github.com/go-redis/redis/v9"
 	"go.opentelemetry.io/otel"
@@ -16,7 +18,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.10.0"
 	"go.uber.org/zap"
 	"gorm.io/driver/mysql"
-	//"gorm.io/gorm"
 	"log"
 	_ "net/http/pprof"
 	"os"
@@ -25,15 +26,16 @@ import (
 // 这里各种地址都是直接写死的，在真实的环境替换为从配置文件里面读取就可以
 // 随便用一个配置框架，大体上都差不多的
 func main() {
+	initZipkin()
 	// 在 main 函数的入口里面完成所有的依赖组装。
 	// 这个部分你可以考虑替换为 google 的 wire 框架，达成依赖注入的效果
-	l, err := zap.NewDevelopment()
+	lg, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
-	zap.ReplaceGlobals(l)
+	zap.ReplaceGlobals(lg)
 
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13306)/userapp"))
+	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:3306)/userapp"))
 	if err != nil {
 		panic(err)
 	}
@@ -44,10 +46,17 @@ func main() {
 	})
 	c := cache.NewRedisCache(rc)
 	repo := repository.NewUserRepository(dao.NewUserDAO(db), c)
-	fmt.Println(repo)
-	//userSvr := service.NewUserService(repo)
+	us := service.NewUserService(repo)
+	server := grpc.NewServer()
+	userapi.RegisterUserServiceServer(server, us)
 
-	initZipkin()
+	l, err := net.Listen("tcp", ":8081")
+	if err != nil {
+		panic(err)
+	}
+	if err = server.Serve(l); err != nil {
+		panic(err)
+	}
 
 	// 路由注册和 middleware 注册，可以抽取出来作为一个单独的方法，也可以将路由注册部分下沉到 handler 包
 	// 例如为 Handler 定义一个新的方法，该方法会注册所有的路由
