@@ -6,6 +6,7 @@ import (
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/repository"
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/repository/dao"
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/service"
+	"github.com/Shopify/sarama"
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
 	"net"
@@ -35,6 +36,11 @@ func main() {
 	}
 	zap.ReplaceGlobals(lg)
 
+	producer, err := sarama.NewSyncProducer([]string{""}, sarama.NewConfig())
+	if err != nil {
+		panic(err)
+	}
+
 	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:3306)/userapp"))
 	if err != nil {
 		panic(err)
@@ -46,7 +52,7 @@ func main() {
 	})
 	c := cache.NewRedisCache(rc)
 	repo := repository.NewUserRepository(dao.NewUserDAO(db), c)
-	us := service.NewUserService(repo)
+	us := service.NewUserService(repo, producer)
 	server := grpc.NewServer()
 	userapi.RegisterUserServiceServer(server, us)
 

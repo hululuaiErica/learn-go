@@ -6,6 +6,25 @@ option go_package = "/gen;userapi";
 
 service UserService {
   rpc CreateUser(CreateUserReq) returns (CreateUserResp);
+  rpc FindById(FindByIdReq) returns (FindByIdResp);
+  rpc Login(LoginReq) returns (LoginResp);
+}
+
+message LoginReq {
+  string email = 1;
+  string password = 2;
+}
+
+message LoginResp {
+  User user = 1;
+}
+
+message FindByIdReq {
+  uint64 id =1;
+}
+
+message FindByIdResp {
+  User user = 1;
 }
 
 message CreateUserReq {

@@ -3,23 +3,26 @@ package service
 import (
 	"context"
 	"crypto/sha1"
-	"errors"
 	"fmt"
 	userapi "gitee.com/geektime-geekbang/geektime-go/live/stress_test/api/user/gen"
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/domainobject/entity"
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/repository"
+	"github.com/Shopify/sarama"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/pbkdf2"
+	"strconv"
 )
 
 type userService struct {
 	repo repository.UserRepository
+	producer sarama.SyncProducer
 	userapi.UnimplementedUserServiceServer
 }
 
-func NewUserService(repo repository.UserRepository) userapi.UserServiceServer {
+func NewUserService(repo repository.UserRepository, producer sarama.SyncProducer) userapi.UserServiceServer {
 	return &userService{
 		repo: repo,
+		producer: producer,
 	}
 }
 
@@ -28,25 +31,37 @@ func (u *userService) EditProfile(ctx context.Context, user entity.User) error {
 	return u.repo.UpdateUser(ctx, user)
 }
 
-func (u *userService) FindById(ctx context.Context, id uint64)(entity.User, error) {
-	return u.repo.GetUserById(ctx, id)
+func (u *userService) FindById(ctx context.Context,req  *userapi.FindByIdReq)(*userapi.FindByIdResp, error) {
+	usr, err := u.repo.GetUserById(ctx, req.Id)
+	if err != nil {
+		return nil, err
+	}
+	return &userapi.FindByIdResp{
+		User: &userapi.User{
+			Id: usr.Id,
+			Name: usr.Name,
+			Avatar: usr.Avatar,
+			Email: usr.Email,
+			Password: usr.Password,
+		},
+	}, nil
 }
 
-func (u *userService) Login(ctx context.Context, input entity.User) (entity.User, error) {
-	usr, err := u.repo.GetUserByEmail(ctx, input.Email)
-	if errors.Is(err, repository.ErrUserNotFound) {
-		return entity.User{}, ErrInvalidUserOrPassword
-	}
-
+func (u *userService) Login(ctx context.Context, req *userapi.LoginReq) (*userapi.LoginResp, error) {
+	usr, err := u.repo.GetUserByEmail(ctx, req.Email)
 	if err != nil {
-		return entity.User{}, err
+		return nil, err
 	}
 
-	encryptedPwd := u.encryptPwdByPbkdf2(input.Password, usr.Salt)
+	encryptedPwd := u.encryptPwdByPbkdf2(req.Password, usr.Salt)
 	if encryptedPwd != usr.Password {
-		return entity.User{}, ErrInvalidUserOrPassword
+		return nil, ErrInvalidUserOrPassword
 	}
-	return usr, nil
+	return &userapi.LoginResp{
+		User: &userapi.User{
+			Id: usr.Id,
+		},
+	}, nil
 }
 
 func(u *userService) CreateUser(ctx context.Context, req *userapi.CreateUserReq) (*userapi.CreateUserResp, error) {
@@ -70,6 +85,15 @@ func(u *userService) CreateUser(ctx context.Context, req *userapi.CreateUserReq)
 	if err != nil {
 		return nil, err
 	}
+
+	_, _, err = u.producer.SendMessage(&sarama.ProducerMessage{
+		Topic: "created_user",
+		Value: sarama.StringEncoder(strconv.FormatUint(user.Id, 10)),
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	req.User.Id = user.Id
 	return &userapi.CreateUserResp{
 		User: req.User,
