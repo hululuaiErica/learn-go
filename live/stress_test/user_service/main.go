@@ -36,7 +36,7 @@ func main() {
 	}
 	zap.ReplaceGlobals(lg)
 
-	producer, err := sarama.NewSyncProducer([]string{""}, sarama.NewConfig())
+	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, sarama.NewConfig())
 	if err != nil {
 		panic(err)
 	}
