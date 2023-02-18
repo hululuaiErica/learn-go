@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/compresser"
 	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/message"
 	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/serialize/json"
 	"github.com/golang/mock/gomock"
@@ -55,7 +56,7 @@ func Test_setFuncField(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ctrl := gomock.NewController(t)
 			defer ctrl.Finish()
-			err := setFuncField(tc.service, tc.mock(ctrl), s)
+			err := setFuncField(tc.service, tc.mock(ctrl), s, compresser.DoNothingCompresser{})
 			assert.Equal(t, tc.wantErr, err)
 			if err != nil {
 				return

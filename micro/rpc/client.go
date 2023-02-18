@@ -3,6 +3,7 @@ package rpc
 import (
 	"context"
 	"errors"
+	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/compresser"
 	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/message"
 	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/serialize"
 	"gitee.com/geektime-geekbang/geektime-go/micro/rpc/serialize/json"
@@ -16,10 +17,10 @@ import (
 // InitService 要为 GetById 之类的函数类型的字段赋值
 func (c *Client) InitService(service Service) error {
 	// 在这里初始化一个 Proxy
-	return setFuncField(service, c, c.serializer)
+	return setFuncField(service, c, c.serializer, c.compresser)
 }
 
-func setFuncField(service Service, p Proxy, s serialize.Serializer) error {
+func setFuncField(service Service, p Proxy, s serialize.Serializer, c compresser.Compresser) error {
 	if service == nil {
 		return errors.New("rpc: 不支持 nil")
 	}
@@ -51,6 +52,11 @@ func setFuncField(service Service, p Proxy, s serialize.Serializer) error {
 					return []reflect.Value{retVal, reflect.ValueOf(err)}
 				}
 
+				reqData, err = c.Compress(reqData)
+				if err != nil {
+					return []reflect.Value{retVal, reflect.ValueOf(err)}
+				}
+
 				meta := make(map[string]string, 2)
 				// 我确实设置了超时
 				if deadline, ok := ctx.Deadline(); ok {
@@ -63,6 +69,7 @@ func setFuncField(service Service, p Proxy, s serialize.Serializer) error {
 				req := &message.Request{
 					ServiceName: service.Name(),
 					MethodName:  fieldTyp.Name,
+					Compresser: c.Code(),
 					Data:        reqData,
 					Serializer: s.Code(),
 					Meta: meta,
@@ -113,6 +120,7 @@ const numOfLengthBytes = 8
 type Client struct {
 	pool pool.Pool
 	serializer serialize.Serializer
+	compresser compresser.Compresser
 }
 
 type ClientOption func(client *Client)
@@ -120,6 +128,12 @@ type ClientOption func(client *Client)
 func ClientWithSerializer(sl serialize.Serializer) ClientOption {
 	return func(client *Client) {
 		client.serializer = sl
+	}
+}
+
+func ClientWithCompresser(c compresser.Compresser) ClientOption {
+	return func(client *Client) {
+		client.compresser  = c
 	}
 }
 
@@ -142,6 +156,7 @@ func NewClient(addr string, opts...ClientOption) (*Client, error) {
 	res := &Client{
 		pool: p,
 		serializer: &json.Serializer{},
+		compresser: compresser.DoNothingCompresser{},
 	}
 	for _, opt := range opts {
 		opt(res)
