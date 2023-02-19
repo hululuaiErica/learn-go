@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc"
 	"gorm.io/gorm"
 	"net"
-	//rstore "gitee.com/geektime-geekbang/geektime-go/web/session/redis"
+	// rstore "gitee.com/geektime-geekbang/geektime-go/web/session/redis"
 	"github.com/go-redis/redis/v9"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/zipkin"
@@ -35,8 +35,10 @@ func main() {
 		panic(err)
 	}
 	zap.ReplaceGlobals(lg)
-
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, sarama.NewConfig())
+	cfg := sarama.NewConfig()
+	cfg.Producer.Return.Successes = true
+	// cfg.Producer.
+	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, cfg)
 	if err != nil {
 		panic(err)
 	}
@@ -51,6 +53,7 @@ func main() {
 		Password: "abc",
 	})
 	c := cache.NewRedisCache(rc)
+
 	repo := repository.NewUserRepository(dao.NewUserDAO(db), c)
 	us := service.NewUserService(repo, producer)
 	server := grpc.NewServer()
