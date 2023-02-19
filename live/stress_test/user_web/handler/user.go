@@ -15,11 +15,14 @@ const (
 
 type UserHandler struct {
 	service userapi.UserServiceClient
+	shadowService userapi.UserServiceClient
 }
 
-func NewUserHandler(us userapi.UserServiceClient) *UserHandler {
+func NewUserHandler(us userapi.UserServiceClient,
+	shadow userapi.UserServiceClient) *UserHandler {
 	return &UserHandler{
 		service: us,
+		shadowService: shadow,
 	}
 }
 
@@ -60,45 +63,6 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 	})
 }
 
-//func (h *UserHandler) Update(ctx *web.Context) {
-//	u := User{}
-//	err := ctx.BindJSON(&u)
-//	if err != nil{
-//		zap.L().Error("web: 解析 JSON 数据错误", zap.Error(err))
-//		_ = ctx.RespJSON(http.StatusInternalServerError, Resp{
-//			Msg: "系统异常",
-//		})
-//	}
-//
-//	uid, err := h.getId(ctx)
-//	if err != nil {
-//		zap.L().Error("handler: 无法获得 user id", zap.Error(err))
-//		_ = ctx.RespJSON(http.StatusInternalServerError, Resp{
-//			Msg: "系统异常",
-//		})
-//		return
-//	}
-//
-//	err = h.service.EditProfile(ctx.Req.Context(), entity.User{
-//		// 一般是前端传了什么，这边就往下传什么
-//		Id: uid,
-//		Name: u.Name,
-//		Email: u.Email,
-//	})
-//	if err != nil {
-//		zap.L().Error("handler: 无法更新用户详情", zap.Error(err))
-//		_ = ctx.RespJSON(http.StatusInternalServerError, Resp{
-//			Msg: "系统异常",
-//		})
-//		return
-//	}
-//
-//	// 可以考虑忽略，不过不嫌麻烦还是要和其它方法一样处理一下
-//	_ = ctx.RespJSON(http.StatusOK, Resp{
-//		Msg: "ok",
-//	})
-//}
-
 func (h *UserHandler) Profile(ctx *gin.Context) {
 	uid, err := h.getId(ctx)
 	if err != nil {
@@ -137,12 +101,22 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		return
 	}
 
-	_, err = h.service.CreateUser(ctx.Request.Context(), &userapi.CreateUserReq{
-		User: &userapi.User{
-			Email: u.Email,
-			Password: u.Password,
-		},
-	})
+	if ctx.Request.Header.Get("x_stress_test") == "true" {
+		_, err = h.shadowService.CreateUser(ctx.Request.Context(), &userapi.CreateUserReq{
+			User: &userapi.User{
+				Email: u.Email,
+				Password: u.Password,
+			},
+		})
+	} else {
+		_, err = h.service.CreateUser(ctx.Request.Context(), &userapi.CreateUserReq{
+			User: &userapi.User{
+				Email: u.Email,
+				Password: u.Password,
+			},
+		})
+	}
+
 	if err != nil {
 		zap.L().Error("创建用户失败", zap.Error(err))
 		ctx.JSON(http.StatusInternalServerError, &Resp{

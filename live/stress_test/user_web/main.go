@@ -16,10 +16,17 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	store := cookie.NewStore([]byte("secret"))
 	us := userapi.NewUserServiceClient(cc)
-	userHdl := handler.NewUserHandler(us)
+
+	shadowCc, err := grpc.Dial("localhost:9081", grpc.WithInsecure())
+	if err != nil {
+		panic(err)
+	}
+	shadowUs := userapi.NewUserServiceClient(shadowCc)
+
+	userHdl := handler.NewUserHandler(us, shadowUs)
 	r := gin.New()
+	store := cookie.NewStore([]byte("secret"))
 	r.Use(sessions.Sessions("mysession", store))
 	r.Use(func(ctx *gin.Context) {
 		path := ctx.Request.URL.Path
@@ -33,6 +40,7 @@ func main() {
 		}
 	})
 	userGin := r.Group("/users")
+
 	userGin.POST("/create", userHdl.SignUp)
 	userGin.POST("/login", userHdl.Login)
 	userGin.GET("/profile", userHdl.Profile)
