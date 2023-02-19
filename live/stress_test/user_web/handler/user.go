@@ -15,14 +15,11 @@ const (
 
 type UserHandler struct {
 	service userapi.UserServiceClient
-	shadowService userapi.UserServiceClient
 }
 
-func NewUserHandler(us userapi.UserServiceClient,
-	shadow userapi.UserServiceClient) *UserHandler {
+func NewUserHandler(us userapi.UserServiceClient) *UserHandler {
 	return &UserHandler{
 		service: us,
-		shadowService: shadow,
 	}
 }
 
@@ -101,21 +98,12 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 		return
 	}
 
-	if ctx.Request.Header.Get("x_stress_test") == "true" {
-		_, err = h.shadowService.CreateUser(ctx.Request.Context(), &userapi.CreateUserReq{
-			User: &userapi.User{
-				Email: u.Email,
-				Password: u.Password,
-			},
-		})
-	} else {
-		_, err = h.service.CreateUser(ctx.Request.Context(), &userapi.CreateUserReq{
-			User: &userapi.User{
-				Email: u.Email,
-				Password: u.Password,
-			},
-		})
-	}
+	_, err = h.service.CreateUser(ctx.Request.Context(), &userapi.CreateUserReq{
+		User: &userapi.User{
+			Email: u.Email,
+			Password: u.Password,
+		},
+	})
 
 	if err != nil {
 		zap.L().Error("创建用户失败", zap.Error(err))
@@ -126,6 +114,7 @@ func (h *UserHandler) SignUp(ctx *gin.Context) {
 	}
 	ctx.String(http.StatusOK, "创建成功")
 }
+
 
 func (h *UserHandler) getId(ctx *gin.Context) (uint64, error){
 	s := sessions.Default(ctx)

@@ -17,14 +17,16 @@ func main() {
 		panic(err)
 	}
 	us := userapi.NewUserServiceClient(cc)
-
 	shadowCc, err := grpc.Dial("localhost:9081", grpc.WithInsecure())
 	if err != nil {
 		panic(err)
 	}
 	shadowUs := userapi.NewUserServiceClient(shadowCc)
 
-	userHdl := handler.NewUserHandler(us, shadowUs)
+	userHdl := handler.NewUserHandler(&UserServiceClient{
+		client: us,
+		shadowClient: shadowUs,
+	})
 	r := gin.New()
 	store := cookie.NewStore([]byte("secret"))
 	r.Use(sessions.Sessions("mysession", store))
