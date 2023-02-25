@@ -6,6 +6,7 @@ import (
 	"google.golang.org/grpc"
 )
 
+// 装饰器模式/dipatcher
 type UserServiceClient struct {
 	client userapi.UserServiceClient
 	shadowClient userapi.UserServiceClient

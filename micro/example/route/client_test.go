@@ -30,6 +30,8 @@ func TestClient(t *testing.T)  {
 	defer cancel()
 	require.NoError(t, err)
 	ctx = context.WithValue(ctx, "group", "A")
+	// 压力测试
+	// ctx = context.WithValue(ctx, "group", "stress")
 	cc, err := client.Dial(ctx, "user-service")
 	require.NoError(t, err)
 	uc := gen.NewUserServiceClient(cc)

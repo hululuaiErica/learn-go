@@ -1,35 +1,34 @@
 package main
 
 import (
+	"context"
 	"errors"
 	userapi "gitee.com/geektime-geekbang/geektime-go/live/stress_test/api/user/gen"
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_web/handler"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
-	"google.golang.org/grpc"
 	"net/http"
 )
 
 func main() {
-	cc, err := grpc.Dial("localhost:8081", grpc.WithInsecure())
+	cc, err := NewClientConnWrapper("localhost:8081", "localhost:9081")
 	if err != nil {
 		panic(err)
 	}
 	us := userapi.NewUserServiceClient(cc)
-	shadowCc, err := grpc.Dial("localhost:9081", grpc.WithInsecure())
-	if err != nil {
-		panic(err)
-	}
-	shadowUs := userapi.NewUserServiceClient(shadowCc)
-
-	userHdl := handler.NewUserHandler(&UserServiceClient{
-		client: us,
-		shadowClient: shadowUs,
-	})
+	userHdl := handler.NewUserHandler(us)
 	r := gin.New()
 	store := cookie.NewStore([]byte("secret"))
 	r.Use(sessions.Sessions("mysession", store))
+	r.Use(func(ctx *gin.Context) {
+		// ctx 里面压测标记位
+		// ctx.Request.Header => ctx.Request.Context()
+		if ctx.Request.Header.Get("x_stress_test") == "true" {
+			cctx := context.WithValue(ctx.Request.Context(), "stress_test", "true")
+			ctx.Request = ctx.Request.WithContext(cctx)
+		}
+	})
 	r.Use(func(ctx *gin.Context) {
 		path := ctx.Request.URL.Path
 		if path == "/user/create" || path == "/user/login" {

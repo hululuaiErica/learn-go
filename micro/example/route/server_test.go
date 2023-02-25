@@ -25,6 +25,8 @@ func TestServer(t *testing.T) {
 		var group = "A"
 		if i % 2 == 0 {
 			group = "B"
+			// 压力测试
+			// group = "stress"
 		}
 		server, err := micro.NewServer("user-service",
 			micro.ServerWithRegistry(r), micro.ServerWithGroup(group))

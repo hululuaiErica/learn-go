@@ -81,6 +81,7 @@ func(u *userService) CreateUser(ctx context.Context, req *userapi.CreateUserReq)
 	salt := uuid.New().String()
 	user.Salt = salt
 	user.Password = u.encryptPwdByPbkdf2(user.Password, salt)
+
 	user, err =  u.repo.CreateUser(ctx, user)
 	if err != nil {
 		return nil, err

@@ -15,6 +15,15 @@ type UserDAO interface {
 	GetUserById(ctx context.Context, id uint64) (*model.User, error)
 }
 
+type userDAOWithShadow struct {
+	db *gorm.DB // xx/user_db
+	shadowDB *gorm.DB
+}
+type orderDAOWithShadow struct {
+	db *gorm.DB // xxx/order_db
+	shadowDB *gorm.DB
+}
+
 func NewUserDAO(db *gorm.DB) UserDAO {
 	return &userDAO{
 		db: db,
