@@ -1,6 +1,7 @@
 package gorm
 
 import (
+	"context"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"testing"
@@ -87,7 +88,8 @@ func TestCRUD(t *testing.T) {
 
 	// Read
 	var product Product
-	db.First(&product, 1) // find product with integer primary key
+	db.WithContext(context.WithValue(context.Background(),
+		"use_master", "true")).First(&product, 1) // find product with integer primary key
 	db.First(&product, "code = ?", "D42") // find product with code D42
 
 	// Update - update product's price to 200
