@@ -16,6 +16,7 @@ import (
 type userService struct {
 	repo repository.UserRepository
 	producer sarama.SyncProducer
+	// mq YourMQ
 	userapi.UnimplementedUserServiceServer
 }
 
@@ -86,9 +87,13 @@ func(u *userService) CreateUser(ctx context.Context, req *userapi.CreateUserReq)
 	if err != nil {
 		return nil, err
 	}
-
+	stressTestFlag, _ := ctx.Value("stress_test").(string)
 	_, _, err = u.producer.SendMessage(&sarama.ProducerMessage{
 		Topic: "created_user",
+		Headers: []sarama.RecordHeader{{
+			Key: []byte("stress_test"),
+			Value: []byte(stressTestFlag),
+		}},
 		Value: sarama.StringEncoder(strconv.FormatUint(user.Id, 10)),
 	})
 	if err != nil {

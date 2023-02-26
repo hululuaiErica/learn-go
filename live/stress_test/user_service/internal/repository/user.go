@@ -9,6 +9,7 @@ import (
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/domainobject/entity"
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/repository/dao"
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/repository/dao/model"
+	"github.com/go-redis/redis/v9"
 	"go.uber.org/zap"
 	"time"
 )
@@ -29,6 +30,12 @@ func NewUserRepository(dao dao.UserDAO, c cache.Cache) UserRepository {
 		cache: c,
 	}
 }
+
+type cacheUserRepositoryV2 struct {
+	dao dao.UserDAO
+	client *redis.Client
+}
+
 
 type cacheUserRepository struct {
 	dao dao.UserDAO
@@ -51,7 +58,6 @@ func (c *cacheUserRepository) GetUserById(ctx context.Context, id uint64) (entit
 	if err == nil {
 		return u, nil
 	}
-
 	mu, err := c.dao.GetUserById(ctx, id)
 	if errors.Is(err, dao.ErrNoRows) {
 		// 实际上，如果你们公司对安全和数据的要求很高，那么这里你并不能打印 email

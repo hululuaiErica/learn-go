@@ -52,8 +52,9 @@ func main() {
 		Addr: "localhost:6379",
 		Password: "abc",
 	})
-	c := cache.NewRedisCache(rc)
-
+	c := &ShadowCache{
+		c: cache.NewRedisCache(rc),
+	}
 	repo := repository.NewUserRepository(dao.NewUserDAO(db), c)
 	us := service.NewUserService(repo, producer)
 	server := grpc.NewServer()

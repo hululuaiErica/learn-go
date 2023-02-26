@@ -3,6 +3,7 @@ package gorm
 import (
 	"context"
 	"database/sql"
+	"log"
 )
 
 type ShadowPool struct {
@@ -18,6 +19,7 @@ func (s *ShadowPool) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx,
 }
 
 func (s *ShadowPool) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
+	log.Println(query)
 	if ctx.Value("stress_test") == "true" {
 		return s.shadow.PrepareContext(ctx, query)
 	}
@@ -25,6 +27,7 @@ func (s *ShadowPool) PrepareContext(ctx context.Context, query string) (*sql.Stm
 }
 
 func (s *ShadowPool) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	log.Println(query)
 	if ctx.Value("stress_test") == "true" {
 		return s.shadow.ExecContext(ctx, query)
 	}
@@ -32,6 +35,7 @@ func (s *ShadowPool) ExecContext(ctx context.Context, query string, args ...inte
 }
 
 func (s *ShadowPool) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	log.Println(query)
 	if ctx.Value("stress_test") == "true" {
 		return s.shadow.QueryContext(ctx, query)
 	}
@@ -39,6 +43,7 @@ func (s *ShadowPool) QueryContext(ctx context.Context, query string, args ...int
 }
 
 func (s *ShadowPool) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	log.Println(query)
 	if ctx.Value("stress_test") == "true" {
 		return s.shadow.QueryRowContext(ctx, query)
 	}

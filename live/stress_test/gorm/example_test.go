@@ -15,6 +15,7 @@ type Product struct {
 	Price uint
 }
 
+
 func  (p Product) TableName() string {
 	return "product_t"
 }
@@ -26,7 +27,6 @@ func (p *Product) BeforeSave(tx *gorm.DB) (err error) {
 	// }
 
 	// 假如要在这里进行影子库的分流，怎么分？能不能分？
-
 	println("before save")
 	return
 }
@@ -75,25 +75,23 @@ func  (p *Product) AfterFind(tx *gorm.DB) (err error) {
 }
 
 func TestCRUD(t *testing.T) {
-	liveDB, err := sql.Open("mysql", "")
+	liveDB, err := sql.Open("sqlite3", "file:live.db?cache=shared&mode=memory")
 	require.NoError(t, err)
-	shadowDB, err := sql.Open("mysql", "")
+	shadowDB, err := sql.Open("sqlite3", "file:test.db?cache=shared&mode=memory")
 	require.NoError(t, err)
-	db, err := gorm.Open(sqlite.Open("file:test.db?cache=shared&mode=memory"),
-		&gorm.Config{
-		// ConnPool: 传入你的各种读写分离、分库分表、影子库影子表的 ConnPool
-		ConnPool: &ShadowPool{
-			live: liveDB,
-			shadow: shadowDB,
-		},
-		})
-	if err != nil {
-		panic("failed to connect database")
+	db, err := gorm.Open(sqlite.Open("file:test.db?cache=shared&mode=memory"))
+	require.NoError(t, err)
+	p := &ShadowPool{
+		live: liveDB,
+		shadow: shadowDB,
 	}
+	db.Config.ConnPool = p
+	db.Statement.ConnPool = p
 	db.Debug()
 
-	// Migrate the schema
-	db.AutoMigrate(&Product{})
+	// 因为没有指定 shadow，所以只会在生产环境上建表
+	err = db.AutoMigrate(&Product{})
+	require.NoError(t, err)
 
 	// Create
 	db.Create(&Product{Code: "D42", Price: 100})
@@ -101,8 +99,10 @@ func TestCRUD(t *testing.T) {
 
 	// Read
 	var product Product
-	db.WithContext(context.WithValue(context.Background(),
-		"use_master", "true")).First(&product, 1) // find product with integer primary key
+	err = db.WithContext(context.WithValue(context.Background(),
+		"stress_test", "true")).First(&product, 1).Error // find product with integer primary key
+	// 这里肯定报错，no such table，证明了过去了 shadow 上
+	require.NoError(t, err)
 	db.First(&product, "code = ?", "D42") // find product with code D42
 
 	// Update - update product's price to 200
