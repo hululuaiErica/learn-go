@@ -20,7 +20,7 @@ type Server interface {
 	// method 是 HTTP 方法
 	// path 是路由
 	// handleFunc 是你的业务逻辑
-	addRoute(method string, path string, handleFunc HandleFunc)
+	addRoute(method string, path string, handleFunc HandleFunc, ms...Middleware)
 	// 这种允许注册多个，没有必要提供
 	// 让用户自己去管
 	// AddRoute1(method string, path string, handles ...HandleFunc)
@@ -88,8 +88,8 @@ func ServerWithMiddleware(mdls ...Middleware) HTTPServerOption {
 func (h *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	// 你的框架代码就在这里
 	ctx := &Context{
-		Req:  request,
-		Resp: writer,
+		Req:       request,
+		Resp:      writer,
 		tplEngine: h.tplEngine,
 	}
 
@@ -117,6 +117,18 @@ func (h *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request
 	root = m(root)
 
 	root(ctx)
+}
+
+func (h *HTTPServer) UseAny(path string, mdls ...Middleware) {
+	h.addRoute(http.MethodGet, path, nil, mdls...)
+	h.addRoute(http.MethodPost, path, nil, mdls...)
+	h.addRoute(http.MethodOptions, path, nil, mdls...)
+	h.addRoute(http.MethodConnect, path, nil, mdls...)
+	h.addRoute(http.MethodDelete, path, nil, mdls...)
+	h.addRoute(http.MethodHead, path, nil, mdls...)
+	h.addRoute(http.MethodPatch, path, nil, mdls...)
+	h.addRoute(http.MethodPut, path, nil, mdls...)
+	h.addRoute(http.MethodTrace, path, nil, mdls...)
 }
 
 func (h *HTTPServer) flashResp(ctx *Context) {

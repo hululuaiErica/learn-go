@@ -58,3 +58,19 @@ func valueOf(arg any) Expression {
 
 func (c Column) expr() {}
 func (c Column) selectable() {}
+
+func (c Column) Add(delta int) MathExpr {
+	return MathExpr{
+		left: c,
+		op: opAdd,
+		right: value{val: delta},
+	}
+}
+
+func (c Column) Multi(delta int) MathExpr {
+	return MathExpr{
+		left: c,
+		op: opAdd,
+		right: value{val: delta},
+	}
+}

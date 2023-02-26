@@ -9,12 +9,16 @@ type MiddlewareBuilder struct {
 	logFunc func(log string)
 }
 
+func NewBuilder() *MiddlewareBuilder{
+	return &MiddlewareBuilder{}
+}
+
 func (m *MiddlewareBuilder) LogFunc(fn func(log string)) *MiddlewareBuilder {
 	m.logFunc = fn
 	return m
 }
 
-func (m MiddlewareBuilder) Build() web.Middleware {
+func (m *MiddlewareBuilder) Build() web.Middleware {
 	return func(next web.HandleFunc) web.HandleFunc {
 		return func(ctx *web.Context) {
 			// 要记录请求

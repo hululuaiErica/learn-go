@@ -163,57 +163,58 @@ func (s *Selector[T]) buildTable(table TableReference) error {
 	return nil
 }
 
-func (s *Selector[T]) buildExpression(expr Expression) error {
-	switch exp := expr.(type){
-	case nil:
-	case Predicate:
-		// 在这里处理 p
-		// p.left 构建好
-		// p.op 构建好
-		// p.right 构建好
-		_, ok := exp.left.(Predicate)
-		if ok {
-			s.sb.WriteByte('(')
-		}
-		if err := s.buildExpression(exp.left); err != nil {
-			return err
-		}
-		if ok {
-			s.sb.WriteByte(')')
-		}
-
-		if exp.op != "" {
-			s.sb.WriteByte(' ')
-			s.sb.WriteString(exp.op.String())
-			s.sb.WriteByte(' ')
-		}
-		_, ok = exp.right.(Predicate)
-		if ok {
-			s.sb.WriteByte('(')
-		}
-		if err := s.buildExpression(exp.right); err != nil {
-			return err
-		}
-		if ok {
-			s.sb.WriteByte(')')
-		}
-	case Column:
-		// 这种写法很隐晦
-		exp.alias = ""
-		return s.buildColumn(exp)
-	case value:
-		s.sb.WriteByte('?')
-		s.addArg(exp.val)
-	case RawExpr:
-		s.sb.WriteByte('(')
-		s.sb.WriteString(exp.raw)
-		s.addArg(exp.args...)
-		s.sb.WriteByte(')')
-	default:
-		return errs.NewErrUnsupportedExpression(expr)
-	}
-	return nil
-}
+// 我们挪上去 builder 那里
+// func (s *Selector[T]) buildExpression(expr Expression) error {
+// 	switch exp := expr.(type){
+// 	case nil:
+// 	case Predicate:
+// 		// 在这里处理 p
+// 		// p.left 构建好
+// 		// p.op 构建好
+// 		// p.right 构建好
+// 		_, ok := exp.left.(Predicate)
+// 		if ok {
+// 			s.sb.WriteByte('(')
+// 		}
+// 		if err := s.buildExpression(exp.left); err != nil {
+// 			return err
+// 		}
+// 		if ok {
+// 			s.sb.WriteByte(')')
+// 		}
+//
+// 		if exp.op != "" {
+// 			s.sb.WriteByte(' ')
+// 			s.sb.WriteString(exp.op.String())
+// 			s.sb.WriteByte(' ')
+// 		}
+// 		_, ok = exp.right.(Predicate)
+// 		if ok {
+// 			s.sb.WriteByte('(')
+// 		}
+// 		if err := s.buildExpression(exp.right); err != nil {
+// 			return err
+// 		}
+// 		if ok {
+// 			s.sb.WriteByte(')')
+// 		}
+// 	case Column:
+// 		// 这种写法很隐晦
+// 		exp.alias = ""
+// 		return s.buildColumn(exp)
+// 	case value:
+// 		s.sb.WriteByte('?')
+// 		s.addArg(exp.val)
+// 	case RawExpr:
+// 		s.sb.WriteByte('(')
+// 		s.sb.WriteString(exp.raw)
+// 		s.addArg(exp.args...)
+// 		s.sb.WriteByte(')')
+// 	default:
+// 		return errs.NewErrUnsupportedExpression(expr)
+// 	}
+// 	return nil
+// }
 
 func (s *Selector[T]) buildColumns() error {
 	if len(s.columns) == 0 {

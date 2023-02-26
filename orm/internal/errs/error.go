@@ -13,6 +13,7 @@ var (
 	ErrNoRows = errors.New("orm: 没有数据")
 	// ErrInsertZeroRow 代表插入 0 行
 	ErrInsertZeroRow = errors.New("orm: 插入 0 行")
+	ErrNoUpdatedColumns = errors.New("orm: 未指定更新的列")
 )
 
 // func NewErrUnsupportedExpressionV1(expr any) error {
@@ -51,4 +52,8 @@ func NewErrInvalidTagContent(pair string) error {
 
 func NewErrUnsupportedAssignable(expr any) error {
 	return fmt.Errorf("orm: 不支持的赋值表达式类型 %v", expr)
+}
+
+func NewErrUnsupportedAssignableType(exp any) error {
+	return fmt.Errorf("orm: 不支持的 Assignable 表达式 %v", exp)
 }

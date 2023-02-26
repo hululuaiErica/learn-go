@@ -54,8 +54,10 @@ func (s mysqlDialect) buildUpsert(b *builder, upsert *Upsert) error {
 				return errs.NewErrUnknownField(a.col)
 			}
 			b.quote(fd.ColName)
-			b.sb.WriteString("=?")
-			b.addArg(a.val)
+			b.sb.WriteString("=")
+			if err := b.buildExpression(a.val); err != nil {
+				return err
+			}
 		case Column:
 			fd, ok := b.model.FieldMap[a.name]
 			// 字段不对，或者说列不对
@@ -105,8 +107,10 @@ func (s sqliteDialect) buildUpsert(b *builder, upsert *Upsert) error {
 				return errs.NewErrUnknownField(a.col)
 			}
 			b.quote(fd.ColName)
-			b.sb.WriteString("=?")
-			b.addArg(a.val)
+			b.sb.WriteString("=")
+			if err := b.buildExpression(a.val); err != nil {
+				return err
+			}
 		case Column:
 			fd, ok := b.model.FieldMap[a.name]
 			// 字段不对，或者说列不对

@@ -10,6 +10,8 @@ const (
 	opNot op = "NOT"
 	opAnd op = "AND"
 	opOr op = "OR"
+	opAdd = "+"
+	opMulti = "*"
 )
 
 func (o op) String() string {
