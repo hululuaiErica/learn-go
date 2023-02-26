@@ -10,11 +10,30 @@ import (
 type MasterSlaveConnPool struct {
 	master *sql.DB
 	slaves []*sql.DB
+	availableSlaves []*sql.DB
 }
 
 func NewMasterSlaveConnPool(masterDSN string, slavesDSN string) *MasterSlaveConnPool{
+	// cfg, _ := mysql.ParseDSN(slavesDSN)
+	// idx := strings.Index(cfg.Addr, ":")
+	// domain := cfg.Addr[:idx]
+	// ips, err := net.DefaultResolver.LookupHost(context.Background(), domain)
+	// for _, ip :=range ips {
+	// 	cfg.Addr = ip + ":" +cfg.Addr[idx+1:]
+	// 	newDSN := cfg.FormatDSN()
+	// 	db, err :=sql.Open("mysql", newDSN)
+	// 	go func() {
+	// 		// 发心跳
+	// 		ticker := time.NewTicker(time.Second)
+	// 		for range ticker.C {
+	// 			if err := db.Ping(); err != nil {
+	// 				// 我要把 db 标记为不可用
+	// 			}
+	// 		}
+	// 	}()
+	// }
 	return &MasterSlaveConnPool{
-
+		// net.Resolver{}
 	}
 }
 
@@ -37,7 +56,11 @@ func (m *MasterSlaveConnPool) QueryContext(ctx context.Context, query string, ar
 	if ctx.Value("use_master") == "true" {
 		return m.master.QueryContext(ctx, query, args...)
 	}
-	return m.slaves[0].QueryContext(ctx, query, args...)
+	s := m.slaves[0]
+	if err := s.Ping(); err != nil {
+		return nil, err
+	}
+	return s.QueryContext(ctx, query, args...)
 }
 
 func (m *MasterSlaveConnPool) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
