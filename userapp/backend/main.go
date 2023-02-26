@@ -56,12 +56,6 @@ func main() {
 	server := initSever()
 	server.Post("/signup", userHdl.SignUp)
 	server.Post("/login", userHdl.Login)
-
-	// handler.SetService(userSvr)
-	// server.Post("/login", handler.Login)
-
-	server.Post("/login", userHdl.LoginV1(userSvr, sessMgr))
-	// server.Post("/login", userHdl.LoginV2(userSvr, sessMgr))
 	server.Get("/profile", userHdl.Profile)
 	server.Post("/update", userHdl.Update)
 

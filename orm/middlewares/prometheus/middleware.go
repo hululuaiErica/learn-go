@@ -12,6 +12,7 @@ type MiddlewareBuilder struct {
 	Subsystem string
 	Name      string
 	Help string
+	ConstLabels map[string]string
 }
 
 func (m MiddlewareBuilder) Build() orm.Middleware {
@@ -20,6 +21,7 @@ func (m MiddlewareBuilder) Build() orm.Middleware {
 		Subsystem: m.Subsystem,
 		Namespace: m.Name,
 		Help: m.Help,
+		ConstLabels: m.ConstLabels,
 		Objectives: map[float64]float64{
 			0.5: 0.01,
 			0.75: 0.01,
