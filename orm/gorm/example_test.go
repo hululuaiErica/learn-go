@@ -12,16 +12,18 @@ type Product struct {
 	Price uint
 }
 
-// func  (p Product) TableName() string {
-// 	return "product_t"
-// }
+func  (p Product) TableName() string {
+	return "product_t"
+}
 
 func (p *Product) BeforeSave(tx *gorm.DB) (err error) {
-	// tx.Statement.Schema.Table = (tx.Statement.Schema.Table) + "_shadow"
-	// var shadowStatement gorm.Statement = *(tx.Statement)
+	// 影子表
+	// if tx.Statement.Context.Value("shadow") == "true" {
+	// 	tx.Statement.Table = "shadow_product_t"
+	// }
 
-	// shadowSchema.Table  = shadowSchema.Table  + "_shadow"
-	// tx.Statement.Schema = &shadowSchema
+	// 假如要在这里进行影子库的分流，怎么分？能不能分？
+
 	println("before save")
 	return
 }
@@ -54,6 +56,7 @@ func (p *Product) AfterUpdate(tx *gorm.DB) (err error) {
 }
 
 func (p *Product) BeforeDelete(tx *gorm.DB) (err error) {
+	// tx.Statement.Table="123"
 	println("before update")
 	return
 }
@@ -73,11 +76,10 @@ func TestCRUD(t *testing.T) {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	// 打印 SQL，但不执行
-	db.DryRun = true
+	db.Debug()
 
 	// Migrate the schema
-	// db.AutoMigrate(&Product{})
+	db.AutoMigrate(&Product{})
 
 	// Create
 	db.Create(&Product{Code: "D42", Price: 100})
