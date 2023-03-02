@@ -44,6 +44,9 @@ func NewSelector[T any](sess Session) *Selector[T] {
 // }
 
 func (s *Selector[T]) Build() (*Query, error) {
+	defer func() {
+		s.sb.Reset()
+	}()
 	if s.model == nil {
 		var err error
 		s.model, err = s.r.Get(new(T))
