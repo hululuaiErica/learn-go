@@ -21,7 +21,9 @@ func main() {
 	cc, err := grpc.Dial("localhost:8081", 
 		grpc.WithInsecure(), 
 		grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-			ctx = metadata.AppendToOutgoingContext(ctx, "stress_test", "true")
+			if ctx.Value("stress_test") == "true" {
+				ctx = metadata.AppendToOutgoingContext(ctx, "stress_test", "true")
+			}
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}))
 	us := userapi.NewUserServiceClient(cc)

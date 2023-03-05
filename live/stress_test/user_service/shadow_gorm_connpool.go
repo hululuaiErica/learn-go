@@ -9,6 +9,9 @@ import (
 type ShadowPool struct {
 	live gorm.ConnPool
 	shadow gorm.ConnPool
+
+	// live *gorm.DB
+	// shadow *gorm.DB
 }
 
 func (s *ShadowPool) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
