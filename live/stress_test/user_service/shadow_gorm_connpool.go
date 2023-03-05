@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"database/sql"
+	"gorm.io/gorm"
 )
 
 type ShadowPool struct {
-	live *sql.DB
-	shadow *sql.DB
+	live gorm.ConnPool
+	shadow gorm.ConnPool
 }
 
 func (s *ShadowPool) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
@@ -19,18 +20,22 @@ func (s *ShadowPool) PrepareContext(ctx context.Context, query string) (*sql.Stm
 
 func (s *ShadowPool) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	if ctx.Value("stress_test") == "true" {
-		return s.shadow.ExecContext(ctx, query)
+		return s.shadow.ExecContext(ctx, query, args...)
 	}
-	return s.live.ExecContext(ctx, query)
+	return s.live.ExecContext(ctx, query, args...)
 }
 
 func (s *ShadowPool) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	// TODO implement me
-	panic("implement me")
+	if ctx.Value("stress_test") == "true" {
+		return s.shadow.QueryContext(ctx, query, args...)
+	}
+	return s.live.QueryContext(ctx, query, args...)
 }
 
 func (s *ShadowPool) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	// TODO implement me
-	panic("implement me")
+	if ctx.Value("stress_test") == "true" {
+		return s.shadow.QueryRowContext(ctx, query, args...)
+	}
+	return s.live.QueryRowContext(ctx, query, args...)
 }
 

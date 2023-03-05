@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"gitee.com/geektime-geekbang/geektime-go/cache"
 	userapi "gitee.com/geektime-geekbang/geektime-go/live/stress_test/api/user/gen"
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/repository"
@@ -8,6 +9,7 @@ import (
 	"gitee.com/geektime-geekbang/geektime-go/live/stress_test/user_service/internal/service"
 	"github.com/Shopify/sarama"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"gorm.io/gorm"
 	"net"
 	// rstore "gitee.com/geektime-geekbang/geektime-go/web/session/redis"
@@ -43,7 +45,12 @@ func main() {
 		panic(err)
 	}
 
-	db, err := gorm.Open(mysql.Open("root:root@tcp(localhost:3306)/userapp"))
+	liveDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:3306)/userapp"))
+	if err != nil {
+		panic(err)
+	}
+
+	shadowDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:3307)/userapp_shadow"))
 	if err != nil {
 		panic(err)
 	}
@@ -55,9 +62,24 @@ func main() {
 	c := &ShadowCache{
 		c: cache.NewRedisCache(rc),
 	}
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		Conn: &ShadowPool{
+			shadow: shadowDB.ConnPool,
+			live: liveDB.ConnPool,
+		},
+	}))
+	if err != nil {
+		panic(err)
+	}
 	repo := repository.NewUserRepository(dao.NewUserDAO(db), c)
 	us := service.NewUserService(repo, producer)
-	server := grpc.NewServer()
+	server := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
+		vals := metadata.ValueFromIncomingContext(ctx, "stress_test")
+		if len(vals) != 0 {
+			ctx = context.WithValue(ctx, "stress_test", vals[0])
+		}
+		return handler(ctx, req)
+	}))
 	userapi.RegisterUserServiceServer(server, us)
 
 	l, err := net.Listen("tcp", ":8081")

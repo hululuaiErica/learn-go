@@ -28,13 +28,30 @@ services:
       retries: 30
     ports:
       - 3306:3306
+  userapp-shadow:
+    restart: always
+    image: mysql:5.7
+    container_name: userapp-shadow
+    volumes:
+      - type: bind
+        source: ./scripts/shadow/
+        target: /docker-entrypoint-initdb.d/
+    networks:
+      - userapp
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    healthcheck:
+      timeout: 2s
+      retries: 30
+    ports:
+      - 3307:3306
   zookeeper:
     image: wurstmeister/zookeeper
     container_name: zookeeper
     networks:
       - userapp
-    ports:
-      - "2181:2181"                 ## 对外暴露的端口号
+#    ports:
+#      - "2181:2181"                 ## 对外暴露的端口号
   kafka:
     image: wurstmeister/kafka
     container_name: kafka
@@ -52,6 +69,8 @@ services:
       KAFKA_GROUP_MAX_SESSION_TIMEOUT_MS: 60000
       KAFKA_NUM_PARTITIONS: 3
       KAFKA_DELETE_RETENTION_MS: 1000
+    depends_on:
+      - zookeeper
   kafka-manager:
     image: sheepkiller/kafka-manager
     container_name: kafka-manager
@@ -60,7 +79,7 @@ services:
     networks:
       - userapp
     environment:
-      ZK_HOSTS: 127.0.0.1
+      ZK_HOSTS: zookeeper
     ports:
       - "9009:9000"
 networks:

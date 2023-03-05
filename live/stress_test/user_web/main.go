@@ -8,14 +8,22 @@ import (
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"net/http"
 )
 
 func main() {
-	cc, err := NewClientConnWrapper("localhost:8081", "localhost:9081")
-	if err != nil {
-		panic(err)
-	}
+	// cc, err := NewClientConnWrapper("localhost:8081", "localhost:9081")
+	// if err != nil {
+	// 	panic(err)
+	// }
+	cc, err := grpc.Dial("localhost:8081", 
+		grpc.WithInsecure(), 
+		grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+			ctx = metadata.AppendToOutgoingContext(ctx, "stress_test", "true")
+			return invoker(ctx, method, req, reply, cc, opts...)
+		}))
 	us := userapi.NewUserServiceClient(cc)
 	userHdl := handler.NewUserHandler(us)
 	r := gin.New()

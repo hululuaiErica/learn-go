@@ -12,6 +12,10 @@ type Value interface {
 
 type Creator func(model *model.Model, entity any) Value
 
+type Factory interface {
+	Create(model *model.Model, entity any) Value
+}
+
 type ValuerV1 interface {
 	SetColumns(entity any, rows sql.Rows) error
 }

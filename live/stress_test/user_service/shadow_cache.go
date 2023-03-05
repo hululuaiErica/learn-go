@@ -13,25 +13,28 @@ type ShadowCache struct {
 func (s *ShadowCache) Set(ctx context.Context, key string, val any, expiration time.Duration) error {
 	// 改 key 的方案
 	if ctx.Value("stress_test") == "true" {
-		key= "shadow" + key
-		// key= key + "_shadow"
+		key= "shadow_" + key
 	}
 	return s.c.Set(ctx, key, val, expiration)
 }
 
 func (s *ShadowCache) Get(ctx context.Context, key string) (any, error) {
-	// TODO implement me
-	panic("implement me")
+	// 改 key 的方案
+	if ctx.Value("stress_test") == "true" {
+		key= "shadow_" + key
+	}
+	return s.c.Get(ctx, key)
 }
 
 func (s *ShadowCache) Delete(ctx context.Context, key string) error {
-	// TODO implement me
-	panic("implement me")
+	if ctx.Value("stress_test") == "true" {
+		key= "shadow_" + key
+	}
+	return s.c.Delete(ctx, key)
 }
 
 func (s *ShadowCache) LoadAndDelete(ctx context.Context, key string) (any, error) {
-	// TODO implement me
-	panic("implement me")
+	return s.c.LoadAndDelete(ctx, key)
 }
 
 type ShadowCacheV2 struct {
