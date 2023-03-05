@@ -30,15 +30,16 @@ func main() {
 	userHdl := handler.NewUserHandler(us)
 	r := gin.New()
 	store := cookie.NewStore([]byte("secret"))
-	r.Use(sessions.Sessions("mysession", store))
 	r.Use(func(ctx *gin.Context) {
 		// ctx 里面压测标记位
 		// ctx.Request.Header => ctx.Request.Context()
-		if ctx.Request.Header.Get("x_stress_test") == "true" {
+		stressTest := ctx.Request.Header.Get("X-Stress-Test")
+		if  stressTest == "true" {
 			cctx := context.WithValue(ctx.Request.Context(), "stress_test", "true")
 			ctx.Request = ctx.Request.WithContext(cctx)
 		}
 	})
+	r.Use(sessions.Sessions("mysession", store))
 	r.Use(func(ctx *gin.Context) {
 		path := ctx.Request.URL.Path
 		if path == "/user/create" || path == "/user/login" {
