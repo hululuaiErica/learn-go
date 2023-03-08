@@ -200,3 +200,12 @@ func (h *HTTPServer) Start(addr string) error {
 func (h *HTTPServer) Start1(addr string) error {
 	return http.ListenAndServe(addr, h)
 }
+
+func (h *HTTPServer) Namespace(path string) *Namespace {
+	return &Namespace{
+		server: h,
+		path: path,
+	}
+}
+
+
