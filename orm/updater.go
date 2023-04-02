@@ -37,6 +37,9 @@ func (u *Updater[T]) Set(assigns ...Assignable) *Updater[T] {
 }
 
 func (u *Updater[T]) Build() (*Query, error) {
+	defer func() {
+		u.reset()
+	}()
 	if len(u.assigns) == 0 {
 		return nil, errs.ErrNoUpdatedColumns
 	}

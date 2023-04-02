@@ -80,6 +80,9 @@ func (i *Inserter[T]) Columns(cols...string) *Inserter[T] {
 }
 
 func (i *Inserter[T]) Build() (*Query, error) {
+	defer func() {
+		i.reset()
+	}()
 	if len(i.values) == 0 {
 		return nil, errs.ErrInsertZeroRow
 	}

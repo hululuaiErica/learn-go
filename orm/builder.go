@@ -176,3 +176,8 @@ func (b *builder) buildSubExpr(subExpr Expression) error {
 	}
 	return nil
 }
+
+func (b *builder) reset() {
+	b.sb.Reset()
+	b.args = nil
+}
