@@ -2,31 +2,26 @@ package queue
 
 import (
 	"context"
-	"golang.org/x/sync/semaphore"
 	"sync"
 )
 
 // SliceQueue 基于切片的实现
 type SliceQueue[T any] struct {
-	data     []T
-	head     int
-	tail     int
-	count    int
-	zero     T
-	mutex    *sync.RWMutex
-	notFull  *sync.Cond
-	notEmpty *sync.Cond
-
-	cond *semaphore.Weighted
+	data  []T
+	head  int
+	tail  int
+	count int
+	zero  T
+	mutex *sync.RWMutex
+	cond  *sync.Cond
 }
 
 func NewSliceQueue[T any](capacity int) *SliceQueue[T] {
 	mutex := &sync.RWMutex{}
 	return &SliceQueue[T]{
-		data:     make([]T, capacity),
-		mutex:    mutex,
-		notFull:  sync.NewCond(mutex),
-		notEmpty: sync.NewCond(mutex),
+		data:  make([]T, capacity),
+		mutex: mutex,
+		cond:  sync.NewCond(mutex),
 	}
 }
 
@@ -41,9 +36,7 @@ func (q *SliceQueue[T]) In(ctx context.Context, v T) error {
 	defer q.mutex.Unlock()
 
 	for q.isFull() {
-		// 如果是队列是满的，我就在这里等着
-		// 有人出队了，我就会被唤醒
-		q.notFull.Wait()
+		q.cond.Wait()
 	}
 	// 没有满才会往下执行
 	q.data[q.tail] = v
@@ -53,7 +46,7 @@ func (q *SliceQueue[T]) In(ctx context.Context, v T) error {
 		q.tail = 0
 	}
 	// 我放了一个元素，我要通知另外一边准备出队的人
-	q.notEmpty.Signal()
+	q.cond.Signal()
 	return nil
 }
 
@@ -63,22 +56,7 @@ func (q *SliceQueue[T]) Out(ctx context.Context) (T, error) {
 	defer q.mutex.Unlock()
 
 	for q.isEmpty() {
-		// 如果队列是 empty，我就在这儿等着
-		// 有人入队了，我就会被唤醒
-
-		// ctx 控制住我在这里不会无限制等待下去
-		// 或者说，不会在整个 for 循环里面无限制等待下去
-		//q.notEmpty.Wait()
-
-		// 我被唤醒的时候，队列里面是不是一定有元素
-
-		// 版本1
-		//select {
-		//case <-ctx.Done():
-		//	return q.zero, ctx.Err()
-		//default:
-		//	q.notEmpty.Wait()
-		//}
+		q.cond.Wait()
 	}
 
 	// 不空才会往下执行
@@ -91,7 +69,7 @@ func (q *SliceQueue[T]) Out(ctx context.Context) (T, error) {
 		q.head = 0
 	}
 	// 我拿走了一个元素，我就唤醒对面在等待空位的人
-	q.notFull.Signal()
+	q.cond.Signal()
 	return front, nil
 }
 
