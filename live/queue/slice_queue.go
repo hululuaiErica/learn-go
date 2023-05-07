@@ -8,25 +8,27 @@ import (
 
 // SliceQueue 基于切片的实现
 type SliceQueue[T any] struct {
-	data     []T
-	head     int
-	tail     int
-	count    int
-	zero     T
-	mutex    *sync.RWMutex
-	notFull  *sync.Cond
-	notEmpty *sync.Cond
+	// 在 Java 里面是数组
+	data  []T
+	head  int
+	tail  int
+	count int
+	zero  T
+	mutex *sync.RWMutex
+	//notFull  *sync.Cond
+	//notEmpty *sync.Cond
 
-	cond *semaphore.Weighted
+	enqueue *semaphore.Weighted
+	dequeue *semaphore.Weighted
 }
 
 func NewSliceQueue[T any](capacity int) *SliceQueue[T] {
 	mutex := &sync.RWMutex{}
 	return &SliceQueue[T]{
-		data:     make([]T, capacity),
-		mutex:    mutex,
-		notFull:  sync.NewCond(mutex),
-		notEmpty: sync.NewCond(mutex),
+		data:    make([]T, capacity),
+		mutex:   mutex,
+		enqueue: semaphore.NewWeighted(int64(capacity)),
+		dequeue: semaphore.NewWeighted(int64(capacity)),
 	}
 }
 
@@ -35,15 +37,19 @@ func NewSliceQueue[T any](capacity int) *SliceQueue[T] {
 //		q.In(ctx, q.zero)
 //		cancel()
 //	}
-func (q *SliceQueue[T]) In(ctx context.Context, v T) error {
 
+func (q *SliceQueue[T]) In(ctx context.Context, v T) error {
+	err := q.enqueue.Acquire(ctx, 1)
+	if err != nil {
+		return err
+	}
+
+	// 但凡到了这里，就相当于你已经预留了一个座位
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
-
-	for q.isFull() {
-		// 如果是队列是满的，我就在这里等着
-		// 有人出队了，我就会被唤醒
-		q.notFull.Wait()
+	if ctx.Err() != nil {
+		q.enqueue.Release(1)
+		return ctx.Err()
 	}
 	// 没有满才会往下执行
 	q.data[q.tail] = v
@@ -53,35 +59,26 @@ func (q *SliceQueue[T]) In(ctx context.Context, v T) error {
 		q.tail = 0
 	}
 	// 我放了一个元素，我要通知另外一边准备出队的人
-	q.notEmpty.Signal()
+	q.dequeue.Release(1)
+	//q.notEmpty.Signal()
 	return nil
 }
 
 // Out ctx 用于超时控制，要么在超时内返回一个数据，要么返回一个 error
 func (q *SliceQueue[T]) Out(ctx context.Context) (T, error) {
-	q.mutex.Lock()
-	defer q.mutex.Unlock()
 
-	for q.isEmpty() {
-		// 如果队列是 empty，我就在这儿等着
-		// 有人入队了，我就会被唤醒
-
-		// ctx 控制住我在这里不会无限制等待下去
-		// 或者说，不会在整个 for 循环里面无限制等待下去
-		//q.notEmpty.Wait()
-
-		// 我被唤醒的时候，队列里面是不是一定有元素
-
-		// 版本1
-		//select {
-		//case <-ctx.Done():
-		//	return q.zero, ctx.Err()
-		//default:
-		//	q.notEmpty.Wait()
-		//}
+	err := q.dequeue.Acquire(ctx, 1)
+	if err != nil {
+		return q.zero, nil
 	}
 
-	// 不空才会往下执行
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+	if ctx.Err() != nil {
+		q.dequeue.Release(1)
+		return q.zero, ctx.Err()
+	}
+
 	front := q.data[q.head]
 	q.data[q.head] = q.zero
 
@@ -91,7 +88,7 @@ func (q *SliceQueue[T]) Out(ctx context.Context) (T, error) {
 		q.head = 0
 	}
 	// 我拿走了一个元素，我就唤醒对面在等待空位的人
-	q.notFull.Signal()
+	q.enqueue.Release(1)
 	return front, nil
 }
 
