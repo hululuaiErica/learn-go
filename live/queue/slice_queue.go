@@ -24,12 +24,15 @@ type SliceQueue[T any] struct {
 
 func NewSliceQueue[T any](capacity int) *SliceQueue[T] {
 	mutex := &sync.RWMutex{}
-	return &SliceQueue[T]{
+	res := &SliceQueue[T]{
 		data:    make([]T, capacity),
 		mutex:   mutex,
 		enqueue: semaphore.NewWeighted(int64(capacity)),
 		dequeue: semaphore.NewWeighted(int64(capacity)),
 	}
+	// 相当于说，先出队的时候（完全咩有入队过），必然阻塞
+	_ = res.dequeue.Acquire(context.TODO(), int64(capacity))
+	return res
 }
 
 //	func (q *SliceQueue[T]) Demo() {
@@ -39,6 +42,7 @@ func NewSliceQueue[T any](capacity int) *SliceQueue[T] {
 //	}
 
 func (q *SliceQueue[T]) In(ctx context.Context, v T) error {
+
 	err := q.enqueue.Acquire(ctx, 1)
 	if err != nil {
 		return err
@@ -47,6 +51,7 @@ func (q *SliceQueue[T]) In(ctx context.Context, v T) error {
 	// 但凡到了这里，就相当于你已经预留了一个座位
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
+	
 	if ctx.Err() != nil {
 		q.enqueue.Release(1)
 		return ctx.Err()
