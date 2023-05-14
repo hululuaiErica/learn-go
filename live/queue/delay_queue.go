@@ -10,6 +10,7 @@ type DelayQueue[T Delayable] struct {
 	q             *PriorityQueue[T]
 	mutex         *sync.Mutex
 	enqueueSignal chan struct{}
+	dequeueSignal chan struct{}
 	//enqueueSignal *sync.Cond
 	//dequeueSignal *sync.Cond
 	zero T
@@ -29,7 +30,8 @@ func NewDelayQueue[T Delayable](c int) *DelayQueue[T] {
 			}
 			return -1
 		}),
-		mutex: m,
+		mutex:         m,
+		enqueueSignal: make(chan struct{}, c),
 		//dequeueSignal: sync.NewCond(m),
 		//enqueueSignal: sync.NewCond(m),
 	}
@@ -37,7 +39,42 @@ func NewDelayQueue[T Delayable](c int) *DelayQueue[T] {
 }
 
 func (d *DelayQueue[T]) In(ctx context.Context, val T) error {
-	
+	if ctx.Err() != nil {
+		return ctx.Err()
+	}
+	d.mutex.Lock()
+	for d.q.isFull() {
+		d.mutex.Unlock()
+		select {
+		case <-d.dequeueSignal:
+			d.mutex.Lock()
+			// 不需要做什么
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+	}
+	//d.mutex.Lock()
+	first, err := d.q.Peek()
+	if err != nil {
+		d.mutex.Unlock()
+		return err
+	}
+	d.q.Enqueue(val)
+	d.mutex.Unlock()
+	if val.Delay() < first.Delay() {
+
+		close(d.enqueueSignal)
+		//select {
+		//case d.enqueueSignal <- struct{}{}:
+		//
+		//	//default:
+		//
+		//}
+
+		//d.enqueueSignal.Broadcast()
+	}
+
+	return nil
 }
 
 // 出队永远拿到"到期"了的
@@ -51,7 +88,9 @@ func (d *DelayQueue[T]) Out(ctx context.Context) (T, error) {
 	}
 	var timer *time.Timer
 	for {
+		d.mutex.Lock()
 		first, err := d.q.Peek()
+		d.mutex.Unlock()
 		switch err {
 		// 你拿到了队首元素
 		case nil:
@@ -113,5 +152,23 @@ func (d *DelayQueue[T]) Out(ctx context.Context) (T, error) {
 }
 
 type Delayable interface {
+	// Delay 实时计算
 	Delay() time.Duration
+}
+
+type DelayableV1 interface {
+	// EndTime 过期的那一刻
+	EndTime() time.Time
+}
+
+type DelayElem struct {
+	end time.Time
+}
+
+func (d DelayElem) EndTime() time.Time {
+	return d.end
+}
+
+func (d DelayElem) Delay() time.Duration {
+	return d.end.Sub(time.Now())
 }
