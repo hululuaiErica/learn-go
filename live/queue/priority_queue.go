@@ -56,6 +56,7 @@ func (p *PriorityQueue[T]) isEmpty() bool {
 	return len(p.data) < 2
 }
 
+// Peek 返回优先级最小的
 func (p *PriorityQueue[T]) Peek() (T, error) {
 	if p.isEmpty() {
 		var t T
