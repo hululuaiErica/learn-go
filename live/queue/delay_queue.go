@@ -1,9 +1,38 @@
 package queue
 
-import "context"
+import (
+	"context"
+	"sync"
+	"time"
+)
 
-type DelayQueue[T any] struct {
-	q *PriorityQueue[T]
+type DelayQueue[T Delayable] struct {
+	q             *PriorityQueue[T]
+	mutex         *sync.Mutex
+	enqueueSignal *sync.Cond
+	dequeueSignal *sync.Cond
+	zero          T
+}
+
+func NewDelayQueue[T Delayable](c int) *DelayQueue[T] {
+	m := &sync.Mutex{}
+	res := &DelayQueue[T]{
+		q: NewPriorityQueue[T](c, func(src T, dst T) int {
+			srcDelay := src.Delay()
+			dstDelay := dst.Delay()
+			if srcDelay > dstDelay {
+				return 1
+			}
+			if srcDelay == dstDelay {
+				return 0
+			}
+			return -1
+		}),
+		mutex:         m,
+		dequeueSignal: sync.NewCond(m),
+		enqueueSignal: sync.NewCond(m),
+	}
+	return res
 }
 
 func (d *DelayQueue[T]) In(ctx context.Context, val T) error {
@@ -17,6 +46,29 @@ func (d *DelayQueue[T]) In(ctx context.Context, val T) error {
 
 // 先考虑 Out，你会把代码写成什么样子
 func (d *DelayQueue[T]) Out(ctx context.Context) (T, error) {
-	//TODO implement me
-	panic("implement me")
+	if ctx.Err() != nil {
+		return d.zero, ctx.Err()
+	}
+	for {
+		first, err := d.q.Peek()
+		switch err {
+		// 你拿到了队首元素
+		case nil:
+			// 1. delay 是 10s
+			delay := first.Delay()
+			time.Sleep(delay)
+
+			// 队列里面根本没有元素
+		case ErrEmptyQueue:
+			// 你要阻塞住自己，等 In 调用，或者等超时
+
+			// 出错了
+		default:
+			return d.zero, err
+		}
+	}
+}
+
+type Delayable interface {
+	Delay() time.Duration
 }
