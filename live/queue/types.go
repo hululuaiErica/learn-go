@@ -18,7 +18,6 @@ type Queue[T any] interface {
 	// Set(ctx context.Context, index int, data T) error
 	// Add(ctx context.Context, index int, data T) error
 
-
 	// Queue[User] => 放的是结构体
 	// Queue[*User] => 放的就是指针
 	// In(context.Background()) 这样永不超时
@@ -28,7 +27,6 @@ type Queue[T any] interface {
 	// 瞬时的
 	// IsEmpty() bool
 
-
 	// timeoutUnit 可以是毫秒，秒，纳秒，分钟，小时
 	// InV1(timeout int64, timeoutUnit int8, val T) error
 
@@ -36,3 +34,7 @@ type Queue[T any] interface {
 	// Out(ctx context.Context) (T, error)
 	// IsEmpty() bool
 }
+
+// Comparator 用于比较两个对象的大小 src < dst, 返回-1，src = dst, 返回0，src > dst, 返回1
+// 不要返回任何其它值！
+type Comparator[T any] func(src T, dst T) int
