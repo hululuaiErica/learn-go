@@ -48,6 +48,12 @@ func TestBizServer(t *testing.T) {
 		email, _ := ctx.FormValue("email")
 		pwd, _ := ctx.FormValue("password")
 		if email == "123@qq.com" && pwd == "123456" {
+			ssid := "123@qq.com"
+			mySessions.Set(ssid, Session{Uid: 123}, time.Minute*15)
+			ctx.SetCookie(&http.Cookie{
+				Name:  "sessid",
+				Value: ssid,
+			})
 			_ = ctx.RespOk("登录成功")
 			return
 		}
@@ -68,6 +74,23 @@ type User struct {
 // 完成登录状态的校验
 func LoginMiddleware(next web.HandleFunc) web.HandleFunc {
 	return func(ctx *web.Context) {
-
+		// 取凭证
+		ssidCk, err := ctx.Req.Cookie("sessid")
+		if err != nil {
+			ctx.RespString(http.StatusForbidden, "没有登录，找不到 cookie")
+			return
+		}
+		// 验证凭证是有效的
+		ssid := ssidCk.Value
+		_, ok := mySessions.Get(ssid)
+		if !ok {
+			ctx.RespString(http.StatusForbidden, "没有登录，找不到 session")
+			return
+		}
+		next(ctx)
 	}
+}
+
+type Session struct {
+	Uid uint64
 }
