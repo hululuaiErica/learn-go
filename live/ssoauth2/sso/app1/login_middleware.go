@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-const ssoLoginURL = "http://sso.mycompany.com:8080/login"
+const ssoLoginURL = "http://sso.com:8080/check_login?source=app1"
 
 type LoginMiddlewareBuilder struct {
 	sess cache.Cache
@@ -21,7 +21,7 @@ func NewLoginMiddlewareBuilder(sess cache.Cache) *LoginMiddlewareBuilder {
 // Middleware 完成登录状态的校验
 func (l *LoginMiddlewareBuilder) Middleware(next web.HandleFunc) web.HandleFunc {
 	return func(ctx *web.Context) {
-		if ctx.Req.URL.Path == "/login" {
+		if ctx.Req.URL.Path == "/token" {
 			next(ctx)
 			return
 		}
