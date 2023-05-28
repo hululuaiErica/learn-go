@@ -6,6 +6,8 @@ import (
 	"net/http"
 )
 
+const ssoLoginURL = "http://sso.mycompany.com:8080/login"
+
 type LoginMiddlewareBuilder struct {
 	sess cache.Cache
 }
@@ -26,14 +28,16 @@ func (l *LoginMiddlewareBuilder) Middleware(next web.HandleFunc) web.HandleFunc 
 		// 取凭证
 		ssidCk, err := ctx.Req.Cookie("sessid")
 		if err != nil {
-			ctx.RespString(http.StatusForbidden, "没有登录，找不到 cookie")
+			// 重定向过去登录那里
+			http.Redirect(ctx.Resp, ctx.Req, ssoLoginURL, http.StatusTemporaryRedirect)
 			return
 		}
 		// 验证凭证是有效的
 		ssid := ssidCk.Value
 		_, err = l.sess.Get(ctx.Req.Context(), ssid)
 		if err != nil {
-			ctx.RespString(http.StatusForbidden, "没有登录，找不到 session")
+			// 重定向过去登录那里
+			http.Redirect(ctx.Resp, ctx.Req, ssoLoginURL, http.StatusTemporaryRedirect)
 			return
 		}
 		next(ctx)
