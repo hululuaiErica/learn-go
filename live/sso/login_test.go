@@ -2,6 +2,7 @@ package sso
 
 import (
 	web "gitee.com/geektime-geekbang/geektime-go/web"
+	"github.com/google/uuid"
 	"github.com/patrickmn/go-cache"
 	"html/template"
 	"net/http"
@@ -48,11 +49,13 @@ func TestBizServer(t *testing.T) {
 		email, _ := ctx.FormValue("email")
 		pwd, _ := ctx.FormValue("password")
 		if email == "123@qq.com" && pwd == "123456" {
-			ssid := "123@qq.com"
+			ssid := uuid.New().String()
 			mySessions.Set(ssid, Session{Uid: 123}, time.Minute*15)
 			ctx.SetCookie(&http.Cookie{
-				Name:  "sessid",
-				Value: ssid,
+				Name:   "sessid",
+				Value:  ssid,
+				Domain: "mycompany.com",
+				//Expires: time.Now().Add(time.Minute * 10),
 			})
 			_ = ctx.RespOk("登录成功")
 			return
@@ -61,8 +64,22 @@ func TestBizServer(t *testing.T) {
 		return
 	})
 
+	go func() {
+		server2 := web.NewHTTPServer(web.ServerWithTemplateEngine(engine),
+			web.ServerWithMiddleware(LoginMiddleware))
+		server2.Get("/profile", func(ctx *web.Context) {
+			_ = ctx.RespJSONOK(&User{
+				Name: "Tom",
+				Age:  18,
+			})
+		})
+		er := server2.Start(":8082")
+		t.Log(er)
+	}()
+
 	err = server.Start(":8081")
 	t.Log(err)
+
 }
 
 type User struct {
@@ -74,6 +91,10 @@ type User struct {
 // 完成登录状态的校验
 func LoginMiddleware(next web.HandleFunc) web.HandleFunc {
 	return func(ctx *web.Context) {
+		if ctx.Req.URL.Path == "/login" {
+			next(ctx)
+			return
+		}
 		// 取凭证
 		ssidCk, err := ctx.Req.Cookie("sessid")
 		if err != nil {

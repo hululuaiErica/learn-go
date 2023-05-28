@@ -14,11 +14,15 @@ type Selectable interface {
 
 type Selector[T any] struct {
 	builder
-	table TableReference
-	where []Predicate
+	table   TableReference
+	where   []Predicate
 	columns []Selectable
 
 	sess Session
+}
+
+func (s *Selector[T]) Table() TableReference {
+	return s.table
 }
 
 // func (db *DB) NewSelector[T any]()*Selector[T] {
@@ -32,7 +36,7 @@ func NewSelector[T any](sess Session) *Selector[T] {
 	c := sess.getCore()
 	return &Selector[T]{
 		builder: builder{
-			core: c,
+			core:   c,
 			quoter: c.dialect.quoter(),
 		},
 		sess: sess,
@@ -96,7 +100,7 @@ func (s *Selector[T]) Build() (*Query, error) {
 
 	s.sb.WriteByte(';')
 	return &Query{
-		SQL: s.sb.String(),
+		SQL:  s.sb.String(),
 		Args: s.args,
 	}, nil
 }
@@ -133,7 +137,7 @@ func (s *Selector[T]) buildTable(table TableReference) error {
 			return err
 		}
 
-		if len(t.using) >0 {
+		if len(t.using) > 0 {
 			s.sb.WriteString(" USING (")
 			// 拼接 USING (xx, xx)
 			for i, col := range t.using {
@@ -281,7 +285,7 @@ func (s *Selector[T]) addArg(vals ...any) {
 // 	return r
 // }
 
-func (s *Selector[T]) Select(cols...Selectable) *Selector[T] {
+func (s *Selector[T]) Select(cols ...Selectable) *Selector[T] {
 	s.columns = cols
 	return s
 }
@@ -298,7 +302,7 @@ func (s *Selector[T]) From(table TableReference) *Selector[T] {
 //
 // }
 
-func (s *Selector[T]) Where(ps...Predicate) *Selector[T] {
+func (s *Selector[T]) Where(ps ...Predicate) *Selector[T] {
 	s.where = ps
 	return s
 }
@@ -385,9 +389,9 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 		return nil, err
 	}
 	res := get[T](ctx, s.sess, s.core, &QueryContext{
-		Type: "SELECT",
+		Type:    "SELECT",
 		Builder: s,
-		Model: s.model,
+		Model:   s.model,
 	})
 	if res.Result != nil {
 		return res.Result.(*T), res.Err
@@ -410,11 +414,11 @@ func (s *Selector[T]) Get(ctx context.Context) (*T, error) {
 // 		Builder: r,
 // 		Model: r.model,
 // 	})
-	// var t *T
-	// if val, ok := res.Result.(*T); ok {
-	// 	t = val
-	// }
-	// return t, res.Err
+// var t *T
+// if val, ok := res.Result.(*T); ok {
+// 	t = val
+// }
+// return t, res.Err
 // 	if res.Result != nil {
 // 		return res.Result.(*T), res.Err
 // 	}

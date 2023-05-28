@@ -25,8 +25,21 @@ type QueryBuilder interface {
 	// Build() (Query, error)
 }
 
-type Query struct {
-	SQL string
-	Args []any
+// CacheQueryBuilder 在这里，本身也是一个装饰器模式
+type CacheQueryBuilder struct {
+	bd    QueryBuilder
+	query *Query
+	err   error
 }
 
+func (cqb *CacheQueryBuilder) Build() (*Query, error) {
+	if cqb.query == nil {
+		cqb.query, cqb.err = cqb.bd.Build()
+	}
+	return cqb.query, cqb.err
+}
+
+type Query struct {
+	SQL  string
+	Args []any
+}

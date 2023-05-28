@@ -12,7 +12,19 @@ type QueryContext struct {
 	// 代表的是查询本身
 	Builder QueryBuilder
 
+	builder1 QueryBuilder
+
+	query *Query
+
 	Model *model.Model
+}
+
+func (qc *QueryContext) BuildQuery() (*Query, error) {
+	var err error
+	if qc.query == nil {
+		qc.query, err = qc.builder1.Build()
+	}
+	return qc.query, err
 }
 
 type QueryResult struct {
@@ -25,7 +37,7 @@ type QueryResult struct {
 }
 
 type Handler func(ctx context.Context, qc *QueryContext) *QueryResult
+
 // type Handler func(ctx context.Context, qc *QueryContext) (*QueryResult, error)
 
-type Middleware func(next Handler)Handler
-
+type Middleware func(next Handler) Handler
