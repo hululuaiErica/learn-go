@@ -1,4 +1,4 @@
-package sso
+package ssoauth2
 
 import (
 	web "gitee.com/geektime-geekbang/geektime-go/web"
