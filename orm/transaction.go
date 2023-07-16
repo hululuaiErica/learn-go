@@ -12,10 +12,55 @@ var (
 
 type Session interface {
 	getCore() core
-	queryContext(ctx context.Context, query string, args...any) (*sql.Rows, error)
-	execContext(ctx context.Context, query string, args...any) (sql.Result, error)
+	queryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+	execContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
+type ShadowSession struct {
+	db     Session
+	shadow Session
+}
+
+func (s *ShadowSession) getCore() core {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (s *ShadowSession) queryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	shadow, ok := ctx.Value("shadow").(bool)
+	if ok && shadow {
+		return s.shadow.queryContext(ctx, query, args...)
+	}
+	return s.db.queryContext(ctx, query, args...)
+}
+
+func (s *ShadowSession) execContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	//TODO implement me
+	panic("implement me")
+}
+
+type masterSlaveSession struct {
+	master Session
+	slaves Session
+}
+
+// Slaves 实现 Session
+type Slaves struct {
+	dbs []*sql.DB
+}
+
+func (m *masterSlaveSession) getCore() core {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (m *masterSlaveSession) queryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	panic("implement me")
+}
+
+func (m *masterSlaveSession) execContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	panic("implement me")
+}
 
 // type TxV1 struct {
 // 	*sql.Tx
@@ -46,17 +91,17 @@ func (t *Tx) Commit() error {
 	// 	t.done= true
 	// 	return t.tx.Commit()
 	// }
-	t.done= true
+	t.done = true
 	return t.tx.Commit()
 }
 
 func (t *Tx) Rollback() error {
-	t.done= true
+	t.done = true
 	return t.tx.Rollback()
 }
 
 func (t *Tx) RollbackIfNotCommit() error {
-	t.done= true
+	t.done = true
 	err := t.tx.Rollback()
 	if err == sql.ErrTxDone {
 		return nil

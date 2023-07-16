@@ -67,6 +67,8 @@ func (s *Selector[T]) Build() (*Query, error) {
 
 	s.sb.WriteString(" FROM ")
 
+	// 在这里执行分库分表，嵌入你的目标库和目标表
+
 	if err := s.buildTable(s.table); err != nil {
 		return nil, err
 	}
