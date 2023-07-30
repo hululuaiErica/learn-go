@@ -33,6 +33,10 @@ func (h *UserHandler) Login(ctx *gin.Context) {
 		})
 		return
 	}
+	//goCtx := ctx.Request.Context()
+	stress := ctx.Value("stress-test")
+	zap.L().Debug("压力测试：%v", zap.Any("stress flag", stress))
+
 	usr, err := h.service.Login(ctx.Request.Context(), &userapi.LoginReq{
 		Email:    req.Email,
 		Password: req.Password,

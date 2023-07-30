@@ -16,20 +16,34 @@ import (
 func main() {
 	cc, err := grpc.Dial("localhost:8081",
 		grpc.WithInsecure(),
-		grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
-			if ctx.Value("stresstest") == "true" {
-				ctx = metadata.AppendToOutgoingContext(ctx, "stresstest", "true")
-			}
+		grpc.WithUnaryInterceptor(func(ctx context.Context,
+			method string, req, reply interface{},
+			cc *grpc.ClientConn, invoker grpc.UnaryInvoker,
+			opts ...grpc.CallOption) error {
+			stress, _ := ctx.Value("stress-test").(string)
+			ctx = metadata.AppendToOutgoingContext(ctx, "stress-test", stress)
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}))
 	us := userapi.NewUserServiceClient(cc)
 	userHdl := handler.NewUserHandler(us)
+
 	r := gin.New()
+	r.ContextWithFallback = true
+
+	// 要加一个标记位提取与设置的东西
+	r.Use(func(ginCtx *gin.Context) {
+		stressTestHeader := ginCtx.GetHeader("x-stress-test")
+		ctx := ginCtx.Request.Context()
+		ctx = context.WithValue(ctx, "stress-test", stressTestHeader)
+		ginCtx.Request = ginCtx.Request.WithContext(ctx)
+	})
+
+	// 登录校验
 	store := cookie.NewStore([]byte("secret"))
 	r.Use(sessions.Sessions("mysession", store))
 	r.Use(func(ctx *gin.Context) {
 		path := ctx.Request.URL.Path
-		if path == "/user/create" || path == "/user/login" {
+		if path == "/users/create" || path == "/users/login" {
 			ctx.Next()
 			return
 		}
@@ -38,6 +52,7 @@ func main() {
 			ctx.AbortWithStatusJSON(http.StatusForbidden, errors.New("请登录"))
 		}
 	})
+
 	userGin := r.Group("/users")
 
 	userGin.POST("/create", userHdl.SignUp)
