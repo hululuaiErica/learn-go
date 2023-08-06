@@ -1,6 +1,9 @@
 package model
 
-import "gorm.io/gorm"
+import (
+	"gorm.io/gorm"
+	"log"
+)
 
 type User struct {
 	Id         uint64 `gorm:"auto_increment"`
@@ -15,6 +18,10 @@ type User struct {
 
 func (u *User) ShadowTableName() string {
 	return "my_users_shadow"
+}
+
+func (u *User) BeforeFind(db *gorm.DB) {
+	log.Println("进来了 before find")
 }
 
 func (u *User) BeforeSave(db *gorm.DB) error {

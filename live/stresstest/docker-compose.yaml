@@ -13,7 +13,7 @@ services:
       test: [ "CMD", "redis-cli", "ping" ]
   userapp-mysql:
     restart: always
-    image: mysql:5.7
+    image: mysql:8.0
     container_name: userapp-mysql
     volumes:
       - type: bind

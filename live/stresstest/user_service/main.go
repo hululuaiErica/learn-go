@@ -4,6 +4,7 @@ import (
 	"context"
 	"gitee.com/geektime-geekbang/geektime-go/cache"
 	userapi "gitee.com/geektime-geekbang/geektime-go/live/stresstest/api/user/gen"
+	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/gormx/callbacks"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao/model"
@@ -33,7 +34,7 @@ func main() {
 	//cfg := sarama.NewConfig()
 	//cfg.Producer.Return.Successes = true
 
-	liveDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:13316)/userapp"))
+	liveDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp"))
 	if err != nil {
 		panic(err)
 	}
@@ -42,12 +43,30 @@ func main() {
 	liveDB.Callback().Delete().Before("*").Register("shadow_delete", gormShadowCallback)
 	liveDB.Callback().Create().Before("*").Register("shadow_create", gormShadowCallback)
 	liveDB.Callback().Update().Before("*").Register("shadow_update", gormShadowCallback)
+	//liveDB.Callback().Raw().Before("*").Register("shadow_update", gormShadowCallback)
+	//liveDB.Callback().Row().Before("*").Register("shadow_update", gormShadowCallback)
 
+	dstDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp_dst"))
+	if err != nil {
+		panic(err)
+	}
+
+	dwcb := callbacks.NewDoubleWriteCallbackBuilder(dstDB).Build()
+	liveDB.Callback().Delete().After("gorm:delete").Register("double_write_delete", dwcb)
+	liveDB.Callback().Create().After("gorm:create").Register("double_write_create", dwcb)
+	liveDB.Callback().Update().After("gorm:update").Register("double_write_update", dwcb)
+
+	bfcb := (&callbacks.BeforeFindBuilder{}).Build()
+	liveDB.Callback().Query().Before("gorm:query").Register("before_find", bfcb)
 	liveDB.AutoMigrate(&model.User{})
+	dstDB.AutoMigrate(&model.User{})
+
+	tx := liveDB.Begin()
+	tx.Commit()
 
 	rc := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379",
-		Password: "",
+		Addr:     "localhost:11379",
+		Password: "abc",
 		DB:       0,
 	})
 
