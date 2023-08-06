@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	userapi "gitee.com/geektime-geekbang/geektime-go/live/stresstest/api/user/gen"
+	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/grpcx/clientconn"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_web/handler"
 	"github.com/gin-contrib/sessions"
 	"github.com/gin-contrib/sessions/cookie"
@@ -14,7 +15,19 @@ import (
 )
 
 func main() {
-	cc, err := grpc.Dial("localhost:8081",
+	liveCC, err := grpc.Dial("localhost:8081",
+		grpc.WithInsecure(),
+		//grpc.WithUnaryInterceptor(func(ctx context.Context,
+		//	method string, req, reply interface{},
+		//	cc *grpc.ClientConn, invoker grpc.UnaryInvoker,
+		//	opts ...grpc.CallOption) error {
+		//	stress, _ := ctx.Value("stress-test").(string)
+		//	ctx = metadata.AppendToOutgoingContext(ctx, "stress-test", stress)
+		//	return invoker(ctx, method, req, reply, cc, opts...)
+		//})
+	)
+
+	shadowCC, err := grpc.Dial("localhost:9081",
 		grpc.WithInsecure(),
 		grpc.WithUnaryInterceptor(func(ctx context.Context,
 			method string, req, reply interface{},
@@ -24,7 +37,10 @@ func main() {
 			ctx = metadata.AppendToOutgoingContext(ctx, "stress-test", stress)
 			return invoker(ctx, method, req, reply, cc, opts...)
 		}))
-	us := userapi.NewUserServiceClient(cc)
+
+	shadow := clientconn.NewShadowClientConn(liveCC, shadowCC)
+
+	us := userapi.NewUserServiceClient(shadow)
 	userHdl := handler.NewUserHandler(us)
 
 	r := gin.New()

@@ -10,8 +10,8 @@ import (
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao/model"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/service"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
 	"gorm.io/gorm"
+	"log"
 	"net"
 	// rstore "gitee.com/geektime-geekbang/geektime-go/web/session/redis"
 	"github.com/go-redis/redis/v9"
@@ -24,38 +24,17 @@ import (
 // 随便用一个配置框架，大体上都差不多的
 func main() {
 	//initZipkin()
-	// 在 main 函数的入口里面完成所有的依赖组装。
-	// 这个部分你可以考虑替换为 google 的 wire 框架，达成依赖注入的效果
 	lg, err := zap.NewDevelopment()
 	if err != nil {
 		panic(err)
 	}
 	zap.ReplaceGlobals(lg)
-	//cfg := sarama.NewConfig()
-	//cfg.Producer.Return.Successes = true
 
-	liveDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp"))
+	shadowDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp_shadow"))
 	if err != nil {
 		panic(err)
 	}
-	liveDB.AutoMigrate(&model.User{})
-
-	//shadowDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp_shadow"))
-	//if err != nil {
-	//	panic(err)
-	//}
-	//shadowDB.AutoMigrate(&model.User{})
-	//
-	//shadowPool := connpool.NewShadowConnPool(liveDB.ConnPool, shadowDB.ConnPool)
-
-	//readWriteSplitPool := connpool.NewReadWriteSplitPool(liveDB, []*gorm.DB{shadowDB})
-	//
-	//db, err := gorm.Open(mysql.New(mysql.Config{
-	//	Conn: shadowPool,
-	//}))
-	//if err != nil {
-	//	panic(err)
-	//}
+	shadowDB.AutoMigrate(&model.User{})
 
 	rc := redis.NewClient(&redis.Options{
 		Addr:     "localhost:11379",
@@ -63,25 +42,16 @@ func main() {
 		DB:       0,
 	})
 
-	if err != nil {
-		panic(err)
-	}
-	repo := repository.NewUserRepository(dao.NewUserDAO(liveDB), cache.NewRedisCache(rc))
+	repo := repository.NewUserRepository(dao.NewUserDAO(shadowDB), cache.NewRedisCache(rc))
 	us := service.NewUserService(repo, nil)
 	server := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context,
 		req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
-		md, ok := metadata.FromIncomingContext(ctx)
-		if ok {
-			stress := md.Get("stress-test")
-			if len(stress) > 0 {
-				ctx = context.WithValue(ctx, "stress-test", stress[0])
-			}
-		}
+		log.Println("我进来了shadow")
 		return handler(ctx, req)
 	}))
 	userapi.RegisterUserServiceServer(server, us)
 
-	l, err := net.Listen("tcp", ":8081")
+	l, err := net.Listen("tcp", ":9081")
 	if err != nil {
 		panic(err)
 	}
