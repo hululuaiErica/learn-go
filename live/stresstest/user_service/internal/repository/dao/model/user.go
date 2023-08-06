@@ -26,11 +26,11 @@ func (u *User) BeforeFind(db *gorm.DB) {
 
 func (u *User) BeforeSave(db *gorm.DB) error {
 	// 我得先知道。这是不是一个压测请求
-	ctx := db.Statement.Context
-	stress := ctx.Value("stress-test")
-	if stress == "true" {
-		db.Statement.Table = "users_shadow"
-	}
+	//ctx := db.Statement.Context
+	//stress := ctx.Value("stress-test")
+	//if stress == "true" {
+	//	db.Statement.Table = "users_shadow"
+	//}
 	return nil
 }
 

@@ -5,6 +5,7 @@ import (
 	"gitee.com/geektime-geekbang/geektime-go/cache"
 	userapi "gitee.com/geektime-geekbang/geektime-go/live/stresstest/api/user/gen"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/gormx/callbacks"
+	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/gormx/connpool"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao/model"
@@ -38,31 +39,22 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+	liveDB.AutoMigrate(&model.User{})
 
-	liveDB.Callback().Query().Before("*").Register("shadow_query", gormShadowCallback)
-	liveDB.Callback().Delete().Before("*").Register("shadow_delete", gormShadowCallback)
-	liveDB.Callback().Create().Before("*").Register("shadow_create", gormShadowCallback)
-	liveDB.Callback().Update().Before("*").Register("shadow_update", gormShadowCallback)
-	//liveDB.Callback().Raw().Before("*").Register("shadow_update", gormShadowCallback)
-	//liveDB.Callback().Row().Before("*").Register("shadow_update", gormShadowCallback)
-
-	dstDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp_dst"))
+	shadowDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp_shadow"))
 	if err != nil {
 		panic(err)
 	}
+	shadowDB.AutoMigrate(&model.User{})
 
-	dwcb := callbacks.NewDoubleWriteCallbackBuilder(dstDB).Build()
-	liveDB.Callback().Delete().After("gorm:delete").Register("double_write_delete", dwcb)
-	liveDB.Callback().Create().After("gorm:create").Register("double_write_create", dwcb)
-	liveDB.Callback().Update().After("gorm:update").Register("double_write_update", dwcb)
+	shadowPool := connpool.NewShadowConnPool(liveDB.ConnPool, shadowDB.ConnPool)
 
-	bfcb := (&callbacks.BeforeFindBuilder{}).Build()
-	liveDB.Callback().Query().Before("gorm:query").Register("before_find", bfcb)
-	liveDB.AutoMigrate(&model.User{})
-	dstDB.AutoMigrate(&model.User{})
-
-	tx := liveDB.Begin()
-	tx.Commit()
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		Conn: shadowPool,
+	}))
+	if err != nil {
+		panic(err)
+	}
 
 	rc := redis.NewClient(&redis.Options{
 		Addr:     "localhost:11379",
@@ -73,7 +65,7 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-	repo := repository.NewUserRepository(dao.NewUserDAO(liveDB), cache.NewRedisCache(rc))
+	repo := repository.NewUserRepository(dao.NewUserDAO(db), cache.NewRedisCache(rc))
 	us := service.NewUserService(repo, nil)
 	server := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context,
 		req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
@@ -95,6 +87,29 @@ func main() {
 	if err = server.Serve(l); err != nil {
 		panic(err)
 	}
+}
+
+func initDB(liveDB *gorm.DB) {
+	liveDB.Callback().Query().Before("*").Register("shadow_query", gormShadowCallback)
+	liveDB.Callback().Delete().Before("*").Register("shadow_delete", gormShadowCallback)
+	liveDB.Callback().Create().Before("*").Register("shadow_create", gormShadowCallback)
+	liveDB.Callback().Update().Before("*").Register("shadow_update", gormShadowCallback)
+	//liveDB.Callback().Raw().Before("*").Register("shadow_update", gormShadowCallback)
+	//liveDB.Callback().Row().Before("*").Register("shadow_update", gormShadowCallback)
+
+	dstDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp_dst"))
+	if err != nil {
+		panic(err)
+	}
+
+	dwcb := callbacks.NewDoubleWriteCallbackBuilder(dstDB).Build()
+	liveDB.Callback().Delete().After("gorm:delete").Register("double_write_delete", dwcb)
+	liveDB.Callback().Create().After("gorm:create").Register("double_write_create", dwcb)
+	liveDB.Callback().Update().After("gorm:update").Register("double_write_update", dwcb)
+
+	bfcb := (&callbacks.BeforeFindBuilder{}).Build()
+	liveDB.Callback().Query().Before("gorm:query").Register("before_find", bfcb)
+	dstDB.AutoMigrate(&model.User{})
 }
 
 func buildShadowCallback(m map[string]string) func(db *gorm.DB) {

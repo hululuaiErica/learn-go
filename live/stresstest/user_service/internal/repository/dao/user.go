@@ -53,8 +53,17 @@ func (dao *userDAO) GetUserByEmail(ctx context.Context, email string) (*model.Us
 }
 
 func (dao *userDAO) InsertUser(ctx context.Context, u *model.User) error {
+	tx := dao.db.WithContext(ctx).Begin()
+	if tx.Error != nil {
+		return tx.Error
+	}
 	name := operationNamePrefix + "InsertUser"
 	span, _ := opentracing.StartSpanFromContext(ctx, name)
 	defer span.Finish()
-	return dao.db.WithContext(ctx).Create(u).Error
+	err := tx.Create(u).Error
+	if err != nil {
+		tx.Rollback()
+	}
+	tx.Commit()
+	return err
 }
