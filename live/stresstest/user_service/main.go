@@ -47,10 +47,12 @@ func main() {
 	}
 	shadowDB.AutoMigrate(&model.User{})
 
-	shadowPool := connpool.NewShadowConnPool(liveDB.ConnPool, shadowDB.ConnPool)
+	//shadowPool := connpool.NewShadowConnPool(liveDB.ConnPool, shadowDB.ConnPool)
+
+	readWriteSplitPool := connpool.NewReadWriteSplitPool(liveDB, []*gorm.DB{shadowDB})
 
 	db, err := gorm.Open(mysql.New(mysql.Config{
-		Conn: shadowPool,
+		Conn: readWriteSplitPool,
 	}))
 	if err != nil {
 		panic(err)

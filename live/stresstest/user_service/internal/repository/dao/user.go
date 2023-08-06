@@ -42,6 +42,7 @@ func (dao *userDAO) UpdateUser(ctx context.Context, u *model.User) error {
 
 func (dao *userDAO) GetUserById(ctx context.Context, id uint64) (*model.User, error) {
 	var u model.User
+	//ctx = connpool.UseMaster(ctx)
 	err := dao.db.WithContext(ctx).Where("id=?", id).First(&u).Error
 	return &u, err
 }

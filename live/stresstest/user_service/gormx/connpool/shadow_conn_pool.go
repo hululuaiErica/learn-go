@@ -31,7 +31,7 @@ func (s *ShadowConnPool) BeginTx(ctx context.Context, opts *sql.TxOptions) (gorm
 }
 
 //func (s *ShadowConnPool) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
-//	cp := s.liveDB
+//	cp := s.master
 //	if s.isShadow(ctx) {
 //		cp = s.shadowDB
 //	}
