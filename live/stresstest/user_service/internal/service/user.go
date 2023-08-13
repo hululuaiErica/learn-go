@@ -10,19 +10,20 @@ import (
 	"github.com/Shopify/sarama"
 	"github.com/google/uuid"
 	"golang.org/x/crypto/pbkdf2"
+	"strconv"
 )
 
 type userService struct {
-	repo repository.UserRepository
-	//producer sarama.SyncProducer
+	repo     repository.UserRepository
+	producer sarama.SyncProducer
 	// mq YourMQ
 	userapi.UnimplementedUserServiceServer
 }
 
 func NewUserService(repo repository.UserRepository, producer sarama.SyncProducer) userapi.UserServiceServer {
 	return &userService{
-		repo: repo,
-		//producer: producer,
+		repo:     repo,
+		producer: producer,
 	}
 }
 
@@ -85,17 +86,14 @@ func (u *userService) CreateUser(ctx context.Context, req *userapi.CreateUserReq
 	if err != nil {
 		return nil, err
 	}
-	//_, _, err = u.producer.SendMessage(&sarama.ProducerMessage{
-	//	Topic: "created_user",
-	//	Headers: []sarama.RecordHeader{{
-	//		Key:   []byte("stresstest"),
-	//		Value: []byte(stressTestFlag),
-	//	}},
-	//	Value: sarama.StringEncoder(strconv.FormatUint(user.Id, 10)),
-	//})
-	//if err != nil {
-	//	return nil, err
-	//}
+	// 我现在的目标是无侵入式地改造这里
+	_, _, err = u.producer.SendMessage(&sarama.ProducerMessage{
+		Topic: "created_user",
+		Value: sarama.StringEncoder(strconv.FormatUint(user.Id, 10)),
+	})
+	if err != nil {
+		return nil, err
+	}
 
 	req.User.Id = user.Id
 	return &userapi.CreateUserResp{

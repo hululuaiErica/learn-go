@@ -9,6 +9,7 @@ import (
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao/model"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/service"
+	"github.com/Shopify/sarama"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 	"gorm.io/gorm"
@@ -31,10 +32,17 @@ func main() {
 		panic(err)
 	}
 	zap.ReplaceGlobals(lg)
-	//cfg := sarama.NewConfig()
-	//cfg.Producer.Return.Successes = true
+	cfg := sarama.NewConfig()
+	cfg.Producer.Return.Successes = true
+	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, cfg)
+	if err != nil {
+		panic(err)
+	}
 
-	liveDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp"))
+	liveDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp"),
+		&gorm.Config{
+			SkipDefaultTransaction: true,
+		})
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +75,7 @@ func main() {
 		panic(err)
 	}
 	repo := repository.NewUserRepository(dao.NewUserDAO(liveDB), cache.NewRedisCache(rc))
-	us := service.NewUserService(repo, nil)
+	us := service.NewUserService(repo, producer)
 	server := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context,
 		req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		md, ok := metadata.FromIncomingContext(ctx)

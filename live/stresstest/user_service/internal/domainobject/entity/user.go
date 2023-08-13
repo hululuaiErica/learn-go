@@ -5,14 +5,15 @@ import (
 	"regexp"
 )
 
-
 type User struct {
-	Id uint64
-	Name string
-	Avatar string
-	Email string
+	Id       uint64
+	Name     string
+	Avatar   string
+	Email    string
 	Password string
-	Salt string
+	Salt     string
+	// 在这里有一个 Shadow
+	Shadow bool
 }
 
 func (u User) Check() error {
@@ -22,7 +23,7 @@ func (u User) Check() error {
 	}
 
 	ok, err := regexp.Match(emailPattern, []byte(u.Email))
-	if !ok || err !=nil {
+	if !ok || err != nil {
 		return errors.New("不正确的邮箱地址")
 	}
 	return nil
