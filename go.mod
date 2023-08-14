@@ -11,6 +11,7 @@ require (
 	github.com/go-redis/redis/v9 v9.0.0-rc.2
 	github.com/go-sql-driver/mysql v1.7.0
 	github.com/golang/mock v1.4.4
+	github.com/golang/mock v1.4.4
 	github.com/google/uuid v1.2.0
 	github.com/gorilla/sessions v1.2.1
 	github.com/gotomicro/ekit v0.0.4

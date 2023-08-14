@@ -48,6 +48,9 @@ func main() {
 	}
 	liveDB.AutoMigrate(&model.User{})
 
+	group, _ := sarama.NewConsumerGroup([]string{"abc"}, "abc-consumer", cfg)
+	group.Consume(context.Background(), []string{"biz-topic"}, &consumer{})
+
 	//shadowDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp_shadow"))
 	//if err != nil {
 	//	panic(err)
@@ -119,6 +122,35 @@ func initDB(liveDB *gorm.DB) {
 	bfcb := (&callbacks.BeforeFindBuilder{}).Build()
 	liveDB.Callback().Query().Before("gorm:query").Register("before_find", bfcb)
 	dstDB.AutoMigrate(&model.User{})
+}
+
+type consumer struct {
+}
+
+func (c *consumer) Setup(session sarama.ConsumerGroupSession) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *consumer) Cleanup(session sarama.ConsumerGroupSession) error {
+	//TODO implement me
+	panic("implement me")
+}
+
+func (c *consumer) ConsumeClaim(session sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
+	msgs := claim.Messages()
+	for msg := range msgs {
+		// 在这里
+		// 重新组装你的压测标记
+		ctx := context.WithValue(context.Background(),
+			string(msg.Headers[0].Key), string(msg.Headers[0].Value))
+		bizHandler(ctx)
+	}
+	return nil
+}
+
+func bizHandler(ctx context.Context) {
+
 }
 
 func buildShadowCallback(m map[string]string) func(db *gorm.DB) {

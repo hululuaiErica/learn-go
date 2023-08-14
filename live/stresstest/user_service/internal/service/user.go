@@ -18,6 +18,7 @@ type userService struct {
 	producer sarama.SyncProducer
 	// mq YourMQ
 	userapi.UnimplementedUserServiceServer
+	client sarama.Client
 }
 
 func NewUserService(repo repository.UserRepository, producer sarama.SyncProducer) userapi.UserServiceServer {
@@ -86,15 +87,35 @@ func (u *userService) CreateUser(ctx context.Context, req *userapi.CreateUserReq
 	if err != nil {
 		return nil, err
 	}
+	var flag []byte
+	if ctx.Value("stress-test") == "true" {
+		flag = []byte("true")
+	}
 	// 我现在的目标是无侵入式地改造这里
 	_, _, err = u.producer.SendMessage(&sarama.ProducerMessage{
-		Topic: "created_user",
+		Topic:    "created_user",
+		Metadata: ctx,
+		Headers: []sarama.RecordHeader{{
+			Key:   []byte("stress-test"),
+			Value: flag,
+		}},
 		Value: sarama.StringEncoder(strconv.FormatUint(user.Id, 10)),
 	})
 	if err != nil {
 		return nil, err
 	}
 
+	//if isShadow(ctx) {
+	//	client := u.client
+	//} else {
+	//	client := u.shadowClient
+	//}
+	//
+	//produer, err := sarama.NewSyncProducerFromClient(u.client)
+	//if err != nil {
+	//	return nil, err
+	//}
+	//produer.BeginTxn()
 	req.User.Id = user.Id
 	return &userapi.CreateUserResp{
 		User: req.User,
