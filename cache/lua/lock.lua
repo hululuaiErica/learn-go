@@ -1,4 +1,4 @@
-val = redis.call('get', KEYS[1])
+local val = redis.call('get', KEYS[1])
 if val == false then
     --    key 不存在
     return redis.call('set', KEYS[1], ARGV[1], 'EX', ARGV[2])
