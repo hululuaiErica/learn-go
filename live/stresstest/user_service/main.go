@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	"gitee.com/geektime-geekbang/geektime-go/cache"
 	userapi "gitee.com/geektime-geekbang/geektime-go/live/stresstest/api/user/gen"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/gormx/callbacks"
+	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/gormx/connpool"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao/model"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/service"
+	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/redisx"
 	"github.com/Shopify/sarama"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
@@ -32,12 +33,12 @@ func main() {
 		panic(err)
 	}
 	zap.ReplaceGlobals(lg)
-	cfg := sarama.NewConfig()
-	cfg.Producer.Return.Successes = true
-	producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, cfg)
-	if err != nil {
-		panic(err)
-	}
+	//cfg := sarama.NewConfig()
+	//cfg.Producer.Return.Successes = true
+	//producer, err := sarama.NewSyncProducer([]string{"localhost:9092"}, cfg)
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	liveDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp"),
 		&gorm.Config{
@@ -48,25 +49,25 @@ func main() {
 	}
 	liveDB.AutoMigrate(&model.User{})
 
-	group, _ := sarama.NewConsumerGroup([]string{"abc"}, "abc-consumer", cfg)
-	group.Consume(context.Background(), []string{"biz-topic"}, &consumer{})
+	//group, _ := sarama.NewConsumerGroup([]string{"abc"}, "abc-consumer", cfg)
+	//group.Consume(context.Background(), []string{"biz-topic"}, &consumer{})
 
-	//shadowDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp_shadow"))
-	//if err != nil {
-	//	panic(err)
-	//}
-	//shadowDB.AutoMigrate(&model.User{})
-	//
-	//shadowPool := connpool.NewShadowConnPool(liveDB.ConnPool, shadowDB.ConnPool)
+	shadowDB, err := gorm.Open(mysql.Open("root:root@tcp(localhost:11306)/userapp_shadow"))
+	if err != nil {
+		panic(err)
+	}
+	shadowDB.AutoMigrate(&model.User{})
+
+	shadowPool := connpool.NewShadowConnPool(liveDB.ConnPool, shadowDB.ConnPool)
 
 	//readWriteSplitPool := connpool.NewReadWriteSplitPool(liveDB, []*gorm.DB{shadowDB})
 	//
-	//db, err := gorm.Open(mysql.New(mysql.Config{
-	//	Conn: shadowPool,
-	//}))
-	//if err != nil {
-	//	panic(err)
-	//}
+	db, err := gorm.Open(mysql.New(mysql.Config{
+		Conn: shadowPool,
+	}))
+	if err != nil {
+		panic(err)
+	}
 
 	rc := redis.NewClient(&redis.Options{
 		Addr:     "localhost:11379",
@@ -74,11 +75,13 @@ func main() {
 		DB:       0,
 	})
 
+	shadowRC := redisx.NewShadowCmdablePrefix(rc)
+
 	if err != nil {
 		panic(err)
 	}
-	repo := repository.NewUserRepository(dao.NewUserDAO(liveDB), cache.NewRedisCache(rc))
-	us := service.NewUserService(repo, producer)
+	repo := repository.NewUserRepository(dao.NewUserDAO(db), shadowRC)
+	us := service.NewUserService(repo, nil)
 	server := grpc.NewServer(grpc.UnaryInterceptor(func(ctx context.Context,
 		req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		md, ok := metadata.FromIncomingContext(ctx)

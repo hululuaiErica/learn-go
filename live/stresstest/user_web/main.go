@@ -69,6 +69,14 @@ func main() {
 		}
 	})
 
+	go func() {
+		server := gin.Default()
+		server.GET("/hello", func(c *gin.Context) {
+			c.String(http.StatusOK, "已经到达")
+		})
+		server.Run(":8083")
+	}()
+
 	userGin := r.Group("/users")
 
 	userGin.POST("/create", userHdl.SignUp)

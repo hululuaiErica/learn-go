@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"gitee.com/geektime-geekbang/geektime-go/cache"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/domainobject/entity"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao"
 	"gitee.com/geektime-geekbang/geektime-go/live/stresstest/user_service/internal/repository/dao/model"
@@ -24,10 +23,10 @@ type UserRepository interface {
 	GetUserById(ctx context.Context, id uint64) (entity.User, error)
 }
 
-func NewUserRepository(dao dao.UserDAO, c cache.Cache) UserRepository {
+func NewUserRepository(dao dao.UserDAO, c redis.Cmdable) UserRepository {
 	return &cacheUserRepository{
-		dao:   dao,
-		cache: c,
+		dao:    dao,
+		client: c,
 	}
 }
 
@@ -37,8 +36,8 @@ type cacheUserRepositoryV2 struct {
 }
 
 type cacheUserRepository struct {
-	dao   dao.UserDAO
-	cache cache.Cache
+	dao    dao.UserDAO
+	client redis.Cmdable
 }
 
 func (c *cacheUserRepository) UpdateUser(ctx context.Context, user entity.User) error {
@@ -49,7 +48,7 @@ func (c *cacheUserRepository) UpdateUser(ctx context.Context, user entity.User) 
 	if err != nil {
 		return err
 	}
-	return c.cache.Delete(ctx, fmt.Sprintf(cacheByIdFormat, user.Id))
+	return c.client.Del(ctx, fmt.Sprintf(cacheByIdFormat, user.Id)).Err()
 }
 
 func (c *cacheUserRepository) GetUserById(ctx context.Context, id uint64) (entity.User, error) {
@@ -122,12 +121,12 @@ func (c *cacheUserRepository) CreateUser(ctx context.Context, user entity.User) 
 
 func (c *cacheUserRepository) getFromCache(ctx context.Context, id uint64) (entity.User, error) {
 	key := fmt.Sprintf(cacheByIdFormat, id)
-	val, err := c.cache.Get(ctx, key)
+	val, err := c.client.Get(ctx, key).Result()
 	if err != nil {
 		return entity.User{}, err
 	}
 	var res entity.User
-	err = json.Unmarshal([]byte(val.(string)), &res)
+	err = json.Unmarshal([]byte(val), &res)
 	return res, err
 }
 
@@ -138,7 +137,7 @@ func (c *cacheUserRepository) cacheUser(ctx context.Context, id uint64, value en
 		zap.L().Error("repo: 序列化 User 失败", zap.Error(err))
 		return
 	}
-	if err = c.cache.Set(ctx, key, val, time.Hour); err != nil {
+	if err = c.client.Set(ctx, key, val, time.Hour).Err(); err != nil {
 		zap.L().Error("repo: 缓存 user 失败", zap.Error(err))
 	}
 }
