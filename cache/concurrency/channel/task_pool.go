@@ -27,17 +27,18 @@ func NewTaskPool(numG int, capacity int) *TaskPool {
 		go func() {
 			for {
 				select {
-				case <- res.close:
+				case <-res.close:
+					close(res.tasks)
 					return
-				case t := <- res.tasks:
+				case t := <-res.tasks:
 					t()
 				}
 			}
 			//for t := range res.tasks {
-				//if res.close.Load() {
-				//	return
-				//}
-				//t()
+			//if res.close.Load() {
+			//	return
+			//}
+			//t()
 			//}
 		}()
 	}
@@ -48,7 +49,7 @@ func NewTaskPool(numG int, capacity int) *TaskPool {
 func (p *TaskPool) Submit(ctx context.Context, t Task) error {
 	select {
 	case p.tasks <- t:
-	case <- ctx.Done():
+	case <-ctx.Done():
 		return ctx.Err()
 	}
 	return nil

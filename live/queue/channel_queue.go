@@ -33,6 +33,7 @@ func (q *ChannelQueue[T]) Pop() T {
 }
 
 type QueueDemo interface {
+	// 是因为你接收的是 any
 	Enqueue(val any)
 }
 
