@@ -15,6 +15,7 @@ var (
 // SliceQueue 先搞一个基于切片的队列实现
 // 使用 ring buffer
 // 实现阻塞功能
+// 到 19:40
 type SliceQueue[T any] struct {
 	// 这边就是我们的数据
 	data []T
@@ -22,20 +23,24 @@ type SliceQueue[T any] struct {
 	tail int
 	size int
 
-	mutex sync.Mutex
+	mutex     *sync.Mutex
+	readCond  *sync.Cond
+	writeCond *sync.Cond
 
 	zero T
 }
 
+// 实现阻塞超时功能
+// 去洗手间。或者思考这个地方怎么写，
 func (s *SliceQueue[T]) Enqueue(ctx context.Context, val T) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if (s.head+1)%s.size == s.tail {
-		// 队列满了，你要阻塞
-		return errFull
+	for (s.head+1)%s.size == s.tail {
+		s.writeCond.Wait()
 	}
 	s.data[s.tail] = val
 	s.tail++
+	s.readCond.Signal()
 	if s.tail >= s.size {
 		s.tail = s.tail - s.size
 	}
@@ -45,14 +50,14 @@ func (s *SliceQueue[T]) Enqueue(ctx context.Context, val T) error {
 func (s *SliceQueue[T]) Dequeue(ctx context.Context) (T, error) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
-	if s.tail == s.head {
-		// 你要阻塞
-		return s.zero, errEmpty
+	for s.tail == s.head {
+		s.readCond.Wait()
 	}
 	res := s.data[s.head]
 	// 你取完之后，你要考虑垃圾回收的问题
 	s.data[s.head] = s.zero
 	s.head++
+	s.writeCond.Signal()
 	if s.head >= s.size {
 		s.head = s.head - s.size
 	}
