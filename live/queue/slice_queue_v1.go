@@ -2,6 +2,7 @@ package queue
 
 import (
 	"context"
+	"github.com/labstack/gommon/log"
 )
 
 // SliceQueueV1 先搞一个基于切片的队列实现
@@ -31,9 +32,9 @@ func (s *SliceQueueV1[T]) Enqueue(ctx context.Context, val T) error {
 		return ctx.Err()
 	case <-s.writeCh:
 		// 可写
-		defer func() {
-			s.writeCh <- struct{}{}
-		}()
+		//defer func() {
+		//	s.writeCh <- struct{}{}
+		//}()
 		s.data[s.tail] = val
 		s.tail++
 		if s.tail >= s.size {
@@ -56,9 +57,9 @@ func (s *SliceQueueV1[T]) Dequeue(ctx context.Context) (T, error) {
 		return s.zero, ctx.Err()
 	case <-s.readCh:
 		// 可写
-		defer func() {
-			s.readCh <- struct{}{}
-		}()
+		//defer func() {
+		//	s.readCh <- struct{}{}
+		//}()
 
 		res := s.data[s.head]
 		// 你取完之后，你要考虑垃圾回收的问题
@@ -67,20 +68,51 @@ func (s *SliceQueueV1[T]) Dequeue(ctx context.Context) (T, error) {
 		if s.head >= s.size {
 			s.head = s.head - s.size
 		}
-		s.writeCh <- struct{}{}
+		select {
+		case s.writeCh <- struct{}{}:
+		default:
+			log.Printf("进来嘞这里\n")
+			return res, ctx.Err()
+		}
 		return res, nil
 	}
 }
 
+//func (s *SliceQueue[T]) Enqueue(ctx context.Context, val T) error {
+//	s.mutex.Lock()
+//	defer s.mutex.Unlock()
+//	done := false
+//	go func() {
+//		select {
+//		case <-ctx.Done():
+//			done = true
+//			s.condFull.Broadcast()
+//		}
+//	}()
+//	for (s.w+1)%s.size == s.r {
+//		s.condFull.Wait()
+//		if done {
+//			return errTimeout
+//		}
+//	}
+//	s.buffer[s.w] = val
+//	s.w++
+//	if s.w >= s.size {
+//		s.w = 0
+//	}
+//	s.condEmpty.Signal()
+//	return nil
+//}
+
 //go:inline
 func NewSliceQueueV1[T any](size int) *SliceQueueV1[T] {
-	ch := make(chan struct{}, 1)
+	ch := make(chan struct{}, 10)
 	ch <- struct{}{}
 	return &SliceQueueV1[T]{
 		data:    make([]T, size),
 		size:    size,
 		writeCh: ch,
-		readCh:  make(chan struct{}, 1),
+		readCh:  make(chan struct{}, 10),
 	}
 }
 
