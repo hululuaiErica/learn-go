@@ -2,40 +2,26 @@ package queue
 
 import (
 	"context"
-	"golang.org/x/sync/semaphore"
 	"sync"
 	"time"
 )
 
 type DelayQueueV1[T DelayableV1] struct {
-	q          *PriorityQueue[T]
-	lock       sync.RWMutex
-	enqueueCap *semaphore.Weighted
-	dequeueCap *semaphore.Weighted
-	zero       T
+	q             *PriorityQueue[T]
+	lock          sync.RWMutex
+	dequeueSignal *cond
+	enqueueSignal *cond
+	zero          T
 }
 
-// Enqueue 先来实现
 func (d *DelayQueueV1[T]) Enqueue(ctx context.Context, val T) error {
-	err := d.enqueueCap.Acquire(ctx, 1)
-	if err != nil {
-		// 这边就是满了
-		return err
-	}
-	d.lock.Lock()
-	defer d.lock.Unlock()
-	if ctx.Err() != nil {
-		d.enqueueCap.Release(1)
-		return ctx.Err()
-	}
+	//TODO implement me
+	panic("implement me")
+}
 
-	err = d.q.Enqueue(val)
-	// 基本不可能的分支
-	if err != nil {
-		return err
-	}
-	d.dequeueCap.Release(1)
-	return nil
+func (d *DelayQueueV1[T]) Dequeue(ctx context.Context) (T, error) {
+	//TODO implement me
+	panic("implement me")
 }
 
 // Dequeue 这边该怎么写？
@@ -49,30 +35,10 @@ func (d *DelayQueueV1[T]) Enqueue(ctx context.Context, val T) error {
 // 2.2.1 如果在等待的时候，有新元素到了，就要看一眼新元素的过期时间是不是更短
 // 2.2.2 如果等待的时候，ctx 超时了，那么就直接返回超时错误
 
-// 到 20:20 分，大家写一下
-func (d *DelayQueueV1[T]) Dequeue(ctx context.Context) (T, error) {
-	err := d.dequeueCap.Acquire(ctx, 1)
-	if err != nil {
-		return d.zero, err
-	}
-	d.lock.Lock()
-	defer d.lock.Unlock()
-	if ctx.Err() != nil {
-		return d.zero, ctx.Err()
-	}
-	// 看一眼队头的元素，但是没有出队。
-	d.q.Peek()
-	val, err := d.q.Dequeue()
-	// 基本不可能的分支
-	if err != nil {
-		return d.zero, err
-	}
-	d.enqueueCap.Release(1)
-	return val, nil
-}
-
 func NewDelayQueueV1[T DelayableV1](c int) *DelayQueueV1[T] {
 	return &DelayQueueV1[T]{
+		// 这里要不要 buffer，要多大？
+		//enqueueCh: make(chan struct{}, c),
 		q: NewPriorityQueue[T](c, func(src T, dst T) int {
 			// 这个地方怎么搞？
 			// 比较元素优先级
@@ -98,6 +64,109 @@ type DelayableV1 interface {
 	// 还要延迟多久
 	Deadline() time.Time
 }
+
+type cond struct {
+	signal chan struct{}
+	l      sync.Locker
+}
+
+func newCond(l sync.Locker) *cond {
+	return &cond{
+		signal: make(chan struct{}),
+		l:      l,
+	}
+}
+
+// broadcast 唤醒等待者
+// 如果没有人等待，那么什么也不会发生
+// 必须加锁之后才能调用这个方法
+// 广播之后锁会被释放，这也是为了确保用户必然是在锁范围内调用的
+func (c *cond) broadcast() {
+	signal := make(chan struct{})
+	old := c.signal
+	c.signal = signal
+	c.l.Unlock()
+	close(old)
+}
+
+// signalCh 返回一个 channel，用于监听广播信号
+// 必须在锁范围内使用
+// 调用后，锁会被释放，这也是为了确保用户必然是在锁范围内调用的
+func (c *cond) signalCh() <-chan struct{} {
+	res := c.signal
+	c.l.Unlock()
+	return res
+}
+
+// 到 20:20 分，大家写一下
+//func (d *DelayQueueV1[T]) DequeueV1(ctx context.Context) (T, error) {
+//	err := d.dequeueCap.Acquire(ctx, 1)
+//	if err != nil {
+//		return d.zero, err
+//	}
+//	d.lock.Lock()
+//
+//	if ctx.Err() != nil {
+//		d.dequeueCap.Release(1)
+//		d.lock.Unlock()
+//		return d.zero, ctx.Err()
+//	}
+//
+//	// dequeueCap 可以确保，你这里肯定有
+//	val, _ := d.q.Peek()
+//	ddl := val.Deadline()
+//	now := time.Now()
+//	if ddl.Before(now) {
+//		d.enqueueCap.Release(1)
+//		d.lock.Unlock()
+//		return val, nil
+//	}
+//
+//	timer := time.NewTimer(ddl.Sub(now))
+//
+//	// 要先释放锁
+//	d.lock.Unlock()
+//	// 这边就是要考虑等val的过期时间
+//	// 还有 ctx 超时时间
+//	select {
+//	case <-ctx.Done():
+//		d.dequeueCap.Release(1)
+//		return d.zero, ctx.Err()
+//	case <-timer.C:
+//		return val, nil
+//		//case <-d.enqueueCh: // 有新元素来了的分支
+//
+//	}
+//}
+
+// Enqueue 先来实现
+//func (d *DelayQueueV1[T]) EnqueueV1(ctx context.Context, val T) error {
+//	//err := d.enqueueCap.Acquire(ctx, 1)
+//	if err != nil {
+//		// 这边就是满了
+//		return err
+//	}
+//	d.lock.Lock()
+//	defer d.lock.Unlock()
+//	if ctx.Err() != nil {
+//		//d.enqueueCap.Release(1)
+//		return ctx.Err()
+//	}
+//
+//	err = d.q.Enqueue(val)
+//	// 基本不可能的分支
+//	if err != nil {
+//		return err
+//	}
+//	// 发个信号
+//	//select {
+//	//case d.enqueueCh <- struct{}{}:
+//	//default:
+//	//
+//	//}
+//	//d.dequeueCap.Release(1)
+//	return nil
+//}
 
 type Delayable interface {
 	// Delay 是还剩下多少过期时间
