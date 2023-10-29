@@ -17,6 +17,8 @@ type PriorityQueue[T any] struct {
 	capacity int
 	// 队列中的元素，为便于计算父子节点的index，0位置留空，根节点从1开始
 	data []T
+	// key 就是元素，int 就是最新版
+	// versions map[T]int
 }
 
 func (p *PriorityQueue[T]) Len() int {
@@ -60,7 +62,6 @@ func (p *PriorityQueue[T]) Enqueue(t T) error {
 		node = parent
 		parent = parent / 2
 	}
-
 	return nil
 }
 
@@ -71,6 +72,8 @@ func (p *PriorityQueue[T]) Dequeue() (T, error) {
 	}
 
 	pop := p.data[1]
+	// 假定说我拿到了堆顶，就是理论上优先级最低的
+	// pop 的优先级
 	p.data[1] = p.data[len(p.data)-1]
 	p.data = p.data[:len(p.data)-1]
 	p.shrinkIfNecessary()
