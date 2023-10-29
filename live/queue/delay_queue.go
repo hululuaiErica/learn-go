@@ -2,21 +2,73 @@ package queue
 
 import (
 	"context"
+	"golang.org/x/sync/semaphore"
+	"sync"
 	"time"
 )
 
 type DelayQueueV1[T DelayableV1] struct {
-	q *PriorityQueue[T]
+	q          *PriorityQueue[T]
+	lock       sync.RWMutex
+	enqueueCap *semaphore.Weighted
+	dequeueCap *semaphore.Weighted
+	zero       T
 }
 
 // Enqueue 先来实现
 func (d *DelayQueueV1[T]) Enqueue(ctx context.Context, val T) error {
-	panic("implement me")
+	err := d.enqueueCap.Acquire(ctx, 1)
+	if err != nil {
+		// 这边就是满了
+		return err
+	}
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	if ctx.Err() != nil {
+		d.enqueueCap.Release(1)
+		return ctx.Err()
+	}
+
+	err = d.q.Enqueue(val)
+	// 基本不可能的分支
+	if err != nil {
+		return err
+	}
+	d.dequeueCap.Release(1)
+	return nil
 }
 
+// Dequeue 这边该怎么写？
+// 或者说，你觉得步骤应该怎么样？
+// 下面这个实现还没有考虑过期时间
+// 算法：
+// 1. 先检测队列有没有元素，没有要阻塞，直到超时，或者拿到元素
+// 2. 有元素，你是不是要看一眼，队头的元素的过期时间有没有到
+// 2.1 如果过期时间到了，直接出队并且返回
+// 2.2 如果过期时间没到，阻塞直到过期时间到了
+// 2.2.1 如果在等待的时候，有新元素到了，就要看一眼新元素的过期时间是不是更短
+// 2.2.2 如果等待的时候，ctx 超时了，那么就直接返回超时错误
+
+// 到 20:20 分，大家写一下
 func (d *DelayQueueV1[T]) Dequeue(ctx context.Context) (T, error) {
-	//TODO implement me
-	panic("implement me")
+	err := d.dequeueCap.Acquire(ctx, 1)
+	if err != nil {
+		return d.zero, err
+	}
+	d.lock.Lock()
+	defer d.lock.Unlock()
+	if ctx.Err() != nil {
+		return d.zero, ctx.Err()
+	}
+	// 看一眼队头的元素，但是没有出队。
+	d.q.Peek()
+	val, err := d.q.Dequeue()
+	// 基本不可能的分支
+	if err != nil {
+		return d.zero, err
+	}
+	d.enqueueCap.Release(1)
+	return val, nil
 }
 
 func NewDelayQueueV1[T DelayableV1](c int) *DelayQueueV1[T] {
