@@ -44,6 +44,7 @@ func TestBizServer(t *testing.T) {
 		pwd, _ := ctx.FormValue("password")
 		if email == "123@qq.com" && pwd == "123456" {
 			// 这边要怎么办？
+			ctx.RespString(http.StatusOK, "登录成功")
 			return
 		}
 		_ = ctx.RespString(http.StatusBadRequest, "登录失败")
@@ -52,7 +53,6 @@ func TestBizServer(t *testing.T) {
 
 	err = server.Start(":8081")
 	t.Log(err)
-
 }
 
 type User struct {
@@ -64,7 +64,7 @@ type User struct {
 // 完成登录状态的校验
 func LoginMiddleware(next web.HandleFunc) web.HandleFunc {
 	return func(ctx *web.Context) {
-
+		next(ctx)
 	}
 }
 
