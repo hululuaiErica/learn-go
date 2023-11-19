@@ -20,7 +20,7 @@ type Server interface {
 	// method 是 HTTP 方法
 	// path 是路由
 	// handleFunc 是你的业务逻辑
-	addRoute(method string, path string, handleFunc HandleFunc, ms...Middleware)
+	addRoute(method string, path string, handleFunc HandleFunc, ms ...Middleware)
 	// 这种允许注册多个，没有必要提供
 	// 让用户自己去管
 	// AddRoute1(method string, path string, handles ...HandleFunc)
@@ -41,7 +41,7 @@ type HTTPServer struct {
 
 	mdls []Middleware
 
-	log func(msg string, args...any)
+	log func(msg string, args ...any)
 
 	tplEngine TemplateEngine
 }
@@ -56,7 +56,7 @@ func NewHTTPServerV1(mdls ...Middleware) *HTTPServer {
 // 第一个问题：相对路径还是绝对路径？
 // 你的配置文件格式，json, yaml, xml
 // func NewHTTPServerV2(cfgFilePath string) *HTTPServer {
-	// 你在这里加载配置，解析，然后初始化 HTTPServer
+// 你在这里加载配置，解析，然后初始化 HTTPServer
 // }
 
 func NewHTTPServer(opts ...HTTPServerOption) *HTTPServer {
@@ -88,9 +88,10 @@ func ServerWithMiddleware(mdls ...Middleware) HTTPServerOption {
 func (h *HTTPServer) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 	// 你的框架代码就在这里
 	ctx := &Context{
-		Req:       request,
-		Resp:      writer,
-		tplEngine: h.tplEngine,
+		Req:        request,
+		Resp:       writer,
+		tplEngine:  h.tplEngine,
+		UserValues: make(map[string]any),
 	}
 
 	// 最后一个是这个
@@ -158,7 +159,6 @@ func (h *HTTPServer) serve(ctx *Context) {
 	// after execute
 }
 
-
 // 在这里注册路由
 // func (h *HTTPServer) AddRoute(method string, path string, handleFunc HandleFunc) {
 // 	// 这里注册到路由树里面
@@ -204,8 +204,6 @@ func (h *HTTPServer) Start1(addr string) error {
 func (h *HTTPServer) Namespace(path string) *Namespace {
 	return &Namespace{
 		server: h,
-		path: path,
+		path:   path,
 	}
 }
-
-
