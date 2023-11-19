@@ -132,6 +132,13 @@ func (h *HTTPServer) UseAny(path string, mdls ...Middleware) {
 	h.addRoute(http.MethodTrace, path, nil, mdls...)
 }
 
+func (h *HTTPServer) Any(path string, handleFunc HandleFunc) {
+	h.Get(path, handleFunc)
+	h.Post(path, handleFunc)
+	h.Options(path, handleFunc)
+	// 所有的 HTTP 方法都加一遍
+}
+
 func (h *HTTPServer) flashResp(ctx *Context) {
 	if ctx.RespStatusCode != 0 {
 		ctx.Resp.WriteHeader(ctx.RespStatusCode)
