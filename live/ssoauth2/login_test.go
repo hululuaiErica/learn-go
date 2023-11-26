@@ -20,7 +20,6 @@ func TestBizServer(t *testing.T) {
 	engine := &web.GoTemplateEngine{
 		T: tpls,
 	}
-
 	server := web.NewHTTPServer(web.ServerWithTemplateEngine(engine),
 		web.ServerWithMiddleware(LoginMiddleware))
 
@@ -44,9 +43,43 @@ func TestBizServer(t *testing.T) {
 		_ = ctx.Render("login.gohtml", nil)
 	})
 
+	server.Post("/logout", func(ctx *web.Context) {
+		ck, err := ctx.Req.Cookie("ssid")
+		if err != nil {
+			ctx.RespString(http.StatusUnauthorized, "请登录")
+			return
+		}
+		ssid := ck.Value
+		// 把这个删掉
+		delete(sessionStore, ssid)
+		ck = &http.Cookie{
+			Name:   "ssid",
+			Value:  ssid,
+			MaxAge: -1,
+			// 在 https 里面才能用这个 cookie
+			//Secure: true,
+			// 前端没有办法通过 JS 来访问 cookie
+			HttpOnly: true,
+		}
+		// 强制删除 cookie
+		ctx.SetCookie(ck)
+		ctx.RespString(http.StatusOK, "退出登录成功")
+	})
+
 	server.Post("/login", func(ctx *web.Context) {
 		email, _ := ctx.FormValue("email")
 		pwd, _ := ctx.FormValue("password")
+		// 这里你肯定是要根据 email 找到密码，然后比较
+		// 1. 流量不会很大。如果不考虑攻击者，那么这个地方流量不会很大
+		// 2. 限流
+		// 3. 要求请求里面带上 signature，正常是前端生成
+		// 4. 前端请求登录页面，会带上一个 token，登录的时候带着这个 token
+
+		// 如果我要优化性能，可以怎么优化？
+		// 命中索引，一次磁盘 IO
+		// SELECT email, password FROM users WHERE email = XXX
+		// 1. 在 email 和 password 创建联合索引，是一个覆盖索引；
+		// 2. Redis 全量缓存 email, password 数据
 		if email == "123@qq.com" && pwd == "123456" {
 			ssid := uuid.New().String()
 			// 这边要怎么办？
@@ -96,7 +129,14 @@ func LoginMiddleware(next web.HandleFunc) web.HandleFunc {
 			ctx.RespString(http.StatusUnauthorized, "请登录")
 			return
 		}
+		// 超大用户规模的情况下，
+		// 你除非部署非常巨大的 redis cluster，不然是撑不住登录校验流量的
 		ssid := ck.Value
+		// 如果我的 Session 是基于 Redis 的
+		// 每一次都要去 Redis 里面取 Session
+		// 1. 一致性哈希 + 本地缓存
+		// 2. jwt token 之类的机制来做登录校验
+		// 3. 直接用 JWT token
 		sess, ok := sessionStore[ssid]
 		if !ok {
 			ctx.RespString(http.StatusUnauthorized, "请登录")
@@ -110,4 +150,19 @@ func LoginMiddleware(next web.HandleFunc) web.HandleFunc {
 type Session struct {
 	// 我 session 里面放的内容，就是 UID，你有需要你可以继续加
 	Uid uint64
+}
+
+type UserBase struct {
+	Id       int64
+	Email    string
+	Password string
+	Phone    string
+}
+
+type UserExtension1 struct {
+	// 再放一些字段
+}
+
+type UserExtension2 struct {
+	// 再放一些字段
 }

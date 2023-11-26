@@ -24,6 +24,7 @@ func TestAServer(t *testing.T) {
 		// 第一个问题：你怎么知道，这个地方就是从 SSO 过来的？
 		// 解析 token
 		// 调用 SSO 的另外一个接口，去解析 token
+		// 到 19:35
 		ctx.RespString(http.StatusOK, "这是 A 平台，你跳回来了")
 	})
 	server.Start(":8081")
@@ -37,10 +38,10 @@ func ALoginMiddleware(next web.HandleFunc) web.HandleFunc {
 		}
 		ck, err := ctx.Req.Cookie("ssid")
 		path := "http://localhost:8081/health"
-		const pattern = "http://localhost:8083/check_login?redirect_uri=%s"
+		const pattern = "http://localhost:8083/check_login?redirect_uri=%s&app_id=%s"
 		// URL 编码
 		path = fmt.Sprintf(pattern,
-			url.PathEscape(path))
+			url.PathEscape(path), "A")
 		if err != nil {
 			// 这个地方你要考虑跳转，跳过去 SSO 里面
 			ctx.Redirect(path)
