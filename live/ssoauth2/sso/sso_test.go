@@ -49,6 +49,8 @@ func TestSSOServer(t *testing.T) {
 			ctx.SetCookie(ck)
 			// 这个地方怎么办？是不是要跳回去？
 			path, _ := ctx.FormValue("redirect_uri")
+			// 带上一个 token，这时候你就要考虑，怎么生成 token？
+			// 这里我假设，你的 token 就是一个 uuid，然后你本地有一个 uuid 列表，
 			ctx.Redirect(path)
 			return
 		}

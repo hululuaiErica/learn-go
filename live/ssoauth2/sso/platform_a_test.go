@@ -21,7 +21,9 @@ func TestAServer(t *testing.T) {
 	// 我可以直接设置吗？
 	server.Get("/health", func(ctx *web.Context) {
 		// 我自己设置一个登录态
-
+		// 第一个问题：你怎么知道，这个地方就是从 SSO 过来的？
+		// 解析 token
+		// 调用 SSO 的另外一个接口，去解析 token
 		ctx.RespString(http.StatusOK, "这是 A 平台，你跳回来了")
 	})
 	server.Start(":8081")
